@@ -47,49 +47,62 @@ SimpleDataPacketProtocol::processData(std::vector<char> data)
 			      data.data() + data.size());
 	}
 
-	auto headerLength = sizeof(_PortalFrame);
+    size_t naluHeaderLength = 4;
 
 	auto packets = std::vector<DataPacket>();
 
-	uint32_t length = 0;
+	while (buffer.size() >= naluHeaderLength) {
 
-	while (buffer.size() >= headerLength) {
+	    // whether startcode is 0x000001 or 0x00000001 (3 or 4 bytes)
+	    uint32_t currentStartCodeSize = buffer[2] == 1 ? 3 : 4;
+        uint32_t naluLength = 0;
 
-		// Read the portal frame out
-		_PortalFrame frame;
+	    // search for next startcode
+	    for (uint32_t i = currentStartCodeSize; i+3 < buffer.size(); i++) {
+            if (
+                    buffer[i] == 0 &&
+                    buffer[i+1] == 0 && (
+                            buffer[i+2] == 1
+                            ||
+                            (
+                                    buffer[i+2] == 0 &&
+                                    buffer[i+3] == 1
+                            )
+                    )
+            ) {
+                // next startcode at i
+                naluLength = i - currentStartCodeSize;
+                break;
+            }
+	    }
 
-		memcpy(&frame, &buffer[0], sizeof(_PortalFrame));
-		length = ntohl(length);
+	    if (naluLength == 0) {
+            // We don't yet have all of the payload in the buffer yet.
+            break;
+        }
 
-		frame.version = ntohl(frame.version);
-		frame.type = ntohl(frame.type);
-		frame.tag = ntohl(frame.tag);
-		frame.payloadSize = ntohl(frame.payloadSize);
+	    std::vector<char> payload;
+	    payload.reserve(4 + naluLength);
 
-		if (headerLength + frame.payloadSize > buffer.size()) {
-			// We don't yet have all of the payload in the buffer yet.
-			break;
-		}
+	    // append startcode
+        char startcode[] = {0, 0, 0, 1};
+        payload.insert(payload.end(), startcode, startcode+4);
 
-		std::vector<char>::const_iterator first =
-			buffer.begin() + sizeof(_PortalFrame);
-		std::vector<char>::const_iterator last = buffer.begin() +
-							 sizeof(_PortalFrame) +
-							 frame.payloadSize;
-		std::vector<char> newVec(first, last);
+        // append payload
+        auto first = buffer.begin() + currentStartCodeSize;
+        auto last = buffer.begin() + currentStartCodeSize + naluLength;
+        payload.insert(payload.end(), first, last);
 
 		auto packet = DataPacket();
-		packet.version = frame.version;
-		packet.type = frame.type;
-		packet.tag = frame.tag;
-		packet.data = newVec;
+		packet.version = 1; // whatever
+		packet.type = 101;  // video
+		packet.tag = 0;     // whatever
+		packet.data = payload;
 
 		packets.push_back(packet);
 
 		// Remove the data from buffer
-		buffer.erase(buffer.begin(), buffer.begin() +
-						     sizeof(_PortalFrame) +
-						     frame.payloadSize);
+		buffer.erase(buffer.begin(), buffer.begin() + currentStartCodeSize + naluLength);
 	}
 
 	return packets;

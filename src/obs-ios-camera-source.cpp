@@ -132,7 +132,7 @@ void IOSCameraInput::deviceManagerDidAddDevice(portal::Device::shared_ptr device
 
 	// Create the connection, and the connection manager, but don't start anything just yet
 	auto deviceConnection =
-		std::make_shared<portal::DeviceConnection>(device, 2345);
+		std::make_shared<portal::DeviceConnection>(device, 2019);
 	auto deviceConnectionController =
 		std::make_shared<DeviceApplicationConnectionController>(
 			deviceConnection);
