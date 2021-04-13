@@ -108,6 +108,6 @@ jobs:
         uses: actions/upload-artifact@v2.2.3
         with:
           name: build-windows
-          path: ${{ github.workspace }}
+          path: ${{ github.workspace }}/obs-ios-camera-source
 
 
