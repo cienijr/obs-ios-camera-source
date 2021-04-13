@@ -22,6 +22,7 @@ jobs:
       QtBaseDir: ${{ github.workspace }}\QtDep
       QTDIR32: ${{ github.workspace }}\QtDep\5.10.1\msvc2017
       QTDIR64: ${{ github.workspace }}\QtDep\5.10.1\msvc2017_64
+      DepsBasePath: ${{ github.workspace }}\obsdependencies
       DepsPath32: ${{ github.workspace }}\obsdependencies\win32
       DepsPath64: ${{ github.workspace }}\obsdependencies\win64
       vcpkgToolchain: c:/vcpkg/scripts/buildsystems/vcpkg.cmake
