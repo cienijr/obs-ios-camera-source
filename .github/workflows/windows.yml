@@ -1,0 +1,112 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI Windows
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    env:
+      build_config: RelWithDebInfo
+      QtBaseDir: ${{ github.workspace }}\QtDep
+      QTDIR32: ${{ github.workspace }}\QtDep\5.10.1\msvc2017
+      QTDIR64: ${{ github.workspace }}\QtDep\5.10.1\msvc2017_64
+      DepsPath32: ${{ github.workspace }}\obsdependencies\win32
+      DepsPath64: ${{ github.workspace }}\obsdependencies\win64
+      vcpkgToolchain: c:/vcpkg/scripts/buildsystems/vcpkg.cmake
+      OpenSSL32: 'c:/vcpkg/installed/x86-windows-static'
+      OpenSSL64: 'c:/vcpkg/installed/x64-windows-static'
+      OBSPath: ${{ github.workspace }}\obs-studio
+      VCPKG_DEFAULT_TRIPLET_64: 'x64-windows-static'
+      VCPKG_DEFAULT_TRIPLET_86: '86-windows-static'
+
+    # The type of runner that the job will run on
+    runs-on: windows-2019
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        with:
+          path: obs-ios-camera-source
+          submodules: true
+
+      - name: Install Qt
+        run: |
+          cd obs-ios-camera-source
+          CI\install-qt-win.cmd
+
+      - name: Install iOS Camera Plugin Dependencies
+        run: |
+          cd obs-ios-camera-source
+          CI\install-ios-camera-dependencies.cmd
+
+      - name: Download OBS Studio dependencies
+        run: |
+          cd obs-ios-camera-source
+          CI\download-obs-deps.cmd
+
+      - name: Checkout & CMake OBS Studio
+        run: |
+          cd obs-ios-camera-source
+          CI\checkout-cmake-obs-windows.cmd
+        env:
+          build_config: RelWithDebInfo
+
+      - name: 'Add msbuild to PATH'
+        uses: microsoft/setup-msbuild@v1.0.2
+
+
+      - name: 'Build OBS Studio 32-bit'
+        run: |
+          msbuild /m /p:Configuration=RelWithDebInfo ${{ github.workspace }}\obs-studio\build32\obs-studio.sln
+
+      - name: 'Build OBS Studio 64-bit'
+        run: |
+          msbuild /m /p:Configuration=RelWithDebInfo ${{ github.workspace }}\obs-studio\build64\obs-studio.sln
+
+
+
+      - name: 'CMake obs-ios-camera-source'
+        run: |
+          cd obs-ios-camera-source
+          CI\prepare-windows.cmd
+
+
+
+      - name: 'Build obs-ios-camera-source 32-bit'
+        run: |
+          cd obs-ios-camera-source
+          msbuild /m /p:Configuration=RelWithDebInfo .\build32\obs-ios-camera-source.sln
+
+      - name: 'Build obs-ios-camera-source 64-bit'
+        run: |
+          cd obs-ios-camera-source
+          msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-ios-camera-source.sln
+
+
+
+      - name: 'Package obs-ios-camera-source'
+        run: |
+          cd obs-ios-camera-source
+          CI\package-windows.cmd
+
+
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v2.2.3
+        with:
+          name: build-windows
+          path: package
+
+
