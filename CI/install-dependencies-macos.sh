@@ -31,7 +31,7 @@ for DEPENDENCY in ${BREW_DEPENDENCIES}; do
     fi
 done
 
-brew install ./CI/macos/qt.rb
+brew install -s ./CI/macos/qt.rb
 
 # Pin this version of QT5 to avoid `brew upgrade`
 # upgrading it to incompatible version
