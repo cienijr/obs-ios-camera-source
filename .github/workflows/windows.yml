@@ -48,22 +48,41 @@ jobs:
           cd obs-ios-camera-source
           CI\install-qt-win.cmd
 
+      - name: Restore cached iOS Camera Plugin Dependencies
+        uses: actions/cache@v2
+        with:
+          key: ${{ runner.os }}-obscam-vcpkg
+          path: |
+            c:\vcpkg\installed\
+
       - name: Install iOS Camera Plugin Dependencies
         run: |
           cd obs-ios-camera-source
           CI\install-ios-camera-dependencies.cmd
+
+      - name: Restore cached OBS Studio dependencies
+        uses: actions/cache@v2
+        with:
+          key: ${{ runner.os }}-obsdeps
+          path: |
+            ${{ github.workspace }}\obsdependencies
 
       - name: Download OBS Studio dependencies
         run: |
           cd obs-ios-camera-source
           CI\download-obs-deps.cmd
 
+      - name: Restore cached OBS Studio builds
+        uses: actions/cache@v2
+        with:
+          key: ${{ runner.os }}-obsbuild
+          path: |
+            ${{ github.workspace }}\obs-studio
+
       - name: Checkout & CMake OBS Studio
         run: |
           cd obs-ios-camera-source
           CI\checkout-cmake-obs-windows.cmd
-        env:
-          build_config: RelWithDebInfo
 
       - name: 'Add msbuild to PATH'
         uses: microsoft/setup-msbuild@v1.0.2
