@@ -18,12 +18,32 @@ jobs:
         with:
           submodules: true
 
-      - name: Run a multi-line script
+      - name: Install dependencies
         run: |
           ./CI/install-dependencies-macos.sh
+
+      - name: Build OBS
+        run: |
           ./CI/install-build-obs-macos.sh
+
+      - name: Build obs-ios-camera-source
+        run: |
           ./CI/build-macos.sh
-          RELEASE_MODE=false ./CI/package-macos.sh
+
+      - name: Install release signing certificates
+        run: |
+          echo TODO
+
+      - name: Package obs-ios-camera-source
+        env:
+          RELEASE_MODE: false
+          # CODE_SIGNING_IDENTITY: $(secrets.macOS.codeSigningIdentity)
+          # INSTALLER_SIGNING_IDENTITY: $(secrets.macOS.installerSigningIdentity)
+          # AC_USERNAME: $(secrets.macOS.notarization.username)
+          # AC_PASSWORD: $(secrets.macOS.notarization.password)
+          # AC_PROVIDER_SHORTNAME: $(secrets.macOS.notarization.providerShortName)
+        run: |
+          ./CI/package-macos.sh
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.3
