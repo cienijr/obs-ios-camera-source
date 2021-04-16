@@ -18,6 +18,63 @@
 #include "ffmpeg-decode.h"
 #include "obs-ffmpeg-compat.h"
 #include <obs-avc.h>
+#include <libavutil/pixdesc.h>
+
+void log_ffmpeg_hwaccel() {
+    AVHWAccel *hwaccel = NULL;
+
+    blog(LOG_INFO, "finding hwaccel");
+    
+    while ((hwaccel = av_hwaccel_next(hwaccel)) != NULL) {
+        const char *cname = avcodec_get_name(hwaccel->id);
+        const char *mtname = av_get_media_type_string(hwaccel->type);
+        const char *fmtname = av_get_pix_fmt_name(hwaccel->pix_fmt);
+
+        blog(LOG_INFO, "found hwaccel id=%d (%s), name=%s, type=%d (%s), pixfmt=%d (%s), caps=%d",
+             hwaccel->id, cname, hwaccel->name, hwaccel->type, mtname, hwaccel->pix_fmt, fmtname, hwaccel->capabilities);
+
+        if (hwaccel->capabilities & AV_HWACCEL_CODEC_CAP_EXPERIMENTAL) {
+            blog(LOG_INFO, "%s is experimental", cname);
+        }
+    }
+
+    blog(LOG_INFO, "done finding hwaccel");
+
+    blog(LOG_INFO, "finding hwdevice");
+
+    const AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+
+    for (int i = 0;; i++) {
+        const AVCodecHWConfig *config = avcodec_get_hw_config(codec, i);
+        if (!config) {
+            break;
+        }
+
+        const char *fmtname = av_get_pix_fmt_name(config->pix_fmt);
+        const char *dtype = av_hwdevice_get_type_name(config->device_type);
+
+        blog(LOG_INFO, "found device config pixfmt=%d (%s), methods=%d, device_type=%d (%s)",
+             config->pix_fmt, fmtname, config->methods, config->device_type, dtype);
+
+        if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) {
+            blog(LOG_INFO, "%s supports hwdevice", dtype);
+        }
+
+        if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX) {
+            blog(LOG_INFO, "%s supports hwframes", dtype);
+        }
+
+        if (config->methods & AV_CODEC_HW_CONFIG_METHOD_INTERNAL) {
+            blog(LOG_INFO, "%s supports internal", dtype);
+        }
+
+        if (config->methods & AV_CODEC_HW_CONFIG_METHOD_AD_HOC) {
+            blog(LOG_INFO, "%s supports adhoc", dtype);
+        }
+    }
+
+    blog(LOG_INFO, "done finding hwdevice");
+}
 
 int ffmpeg_decode_init(struct ffmpeg_decode *decode, enum AVCodecID id)
 {

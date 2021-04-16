@@ -47,6 +47,8 @@ struct ffmpeg_decode
 	size_t packet_size;
 };
 
+    extern void log_ffmpeg_hwaccel() ;
+
 extern int ffmpeg_decode_init(struct ffmpeg_decode *decode, enum AVCodecID id);
 extern void ffmpeg_decode_free(struct ffmpeg_decode *decode);
 
