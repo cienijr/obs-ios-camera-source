@@ -45,11 +45,15 @@ struct ffmpeg_decode
 
 	uint8_t *packet_buffer;
 	size_t packet_size;
+
+	// hardware acceleration
+	bool hw;
+	AVFrame *hw_frame;
+	AVBufferRef *hw_ctx;
+	enum AVPixelFormat hw_format;
 };
 
-    extern void log_ffmpeg_hwaccel() ;
-
-extern int ffmpeg_decode_init(struct ffmpeg_decode *decode, enum AVCodecID id);
+extern int ffmpeg_decode_init(struct ffmpeg_decode *decode, enum AVCodecID id, bool hw);
 extern void ffmpeg_decode_free(struct ffmpeg_decode *decode);
 
 extern bool ffmpeg_decode_audio(struct ffmpeg_decode *decode,

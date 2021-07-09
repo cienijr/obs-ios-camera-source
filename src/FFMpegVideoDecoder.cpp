@@ -61,6 +61,14 @@ void FFMpegVideoDecoder::Shutdown()
     this->join();
 }
 
+void FFMpegVideoDecoder::setHW(bool hw)
+{
+    if (this->hw != hw) {
+        this->hw = hw;
+        this->Flush();
+    }
+}
+
 void FFMpegVideoDecoder::Input(std::vector<char> packet, int type, int tag)
 {
     // Create a new packet item and enqueue it.
@@ -74,7 +82,7 @@ void FFMpegVideoDecoder::processPacketItem(PacketItem *packetItem)
 	mMutex.lock();
 	uint64_t cur_time = os_gettime_ns();
 	if (!ffmpeg_decode_valid(video_decoder)) {
-		if (ffmpeg_decode_init(video_decoder, AV_CODEC_ID_H264) < 0) {
+		if (ffmpeg_decode_init(video_decoder, AV_CODEC_ID_H264, this->hw) < 0) {
 			blog(LOG_WARNING, "Could not initialize video decoder");
 			mMutex.unlock();
 			return;

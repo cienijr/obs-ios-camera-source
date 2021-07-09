@@ -26,6 +26,7 @@
 #define SETTING_PROP_LATENCY_LOW 1
 #define SETTING_PROP_HARDWARE_DECODER "setting_use_hw_decoder"
 #define SETTING_PROP_DISCONNECT_ON_INACTIVE "setting_disconnect_on_inactive"
+#define SETTING_PROP_FFMPEG_HARDWARE_DECODER "setting_use_ffmpeg_hw_decoder"
 
 IOSCameraInput::IOSCameraInput(obs_source_t *source_, obs_data_t *settings)
 	: deviceManager(), source(source_), settings(settings)
@@ -425,6 +426,10 @@ static obs_properties_t *GetIOSCameraProperties(void *data)
 		ppts, SETTING_PROP_DISCONNECT_ON_INACTIVE,
 		obs_module_text("OBSIOSCamera.Settings.DisconnectOnInactive"));
 
+    obs_properties_add_bool(
+            ppts, SETTING_PROP_FFMPEG_HARDWARE_DECODER,
+            obs_module_text("OBSIOSCamera.Settings.UseFFMpegHardwareDecoder"));
+
 	return ppts;
 }
 
@@ -439,6 +444,7 @@ static void GetIOSCameraDefaults(obs_data_t *settings)
 #endif
 	obs_data_set_default_bool(settings, SETTING_PROP_DISCONNECT_ON_INACTIVE,
 				  false);
+    obs_data_set_default_bool(settings, SETTING_PROP_FFMPEG_HARDWARE_DECODER, false);
 }
 
 static void SaveIOSCameraInput(void *data, obs_data_t *settings)
@@ -460,11 +466,16 @@ static void UpdateIOSCameraInput(void *data, obs_data_t *settings)
 		 SETTING_PROP_LATENCY_LOW);
 	obs_source_set_async_unbuffered(input->source, is_unbuffered);
 
+	bool useFFMpegHardwareDecoder =
+        obs_data_get_bool(settings, SETTING_PROP_FFMPEG_HARDWARE_DECODER);
+
+	input->ffmpegVideoDecoder.setHW(useFFMpegHardwareDecoder);
+
 #ifdef __APPLE__
 	bool useHardwareDecoder =
 		obs_data_get_bool(settings, SETTING_PROP_HARDWARE_DECODER);
 
-	if (useHardwareDecoder) {
+	if (useHardwareDecoder && !useFFMpegHardwareDecoder) {
 		input->videoDecoder = &input->videoToolboxVideoDecoder;
 	} else {
 		input->videoDecoder = &input->ffmpegVideoDecoder;
@@ -493,6 +504,6 @@ void RegisterIOSCameraSource()
 	info.get_properties = GetIOSCameraProperties;
 	info.save = SaveIOSCameraInput;
 	info.update = UpdateIOSCameraInput;
-	info.icon_type = OBS_ICON_TYPE_CAMERA;
+//	info.icon_type = OBS_ICON_TYPE_CAMERA;
 	obs_register_source(&info);
 }

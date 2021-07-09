@@ -61,6 +61,9 @@ public:
 	void Drain() override;
 	void Shutdown() override;
 
+	bool getHW() { return hw; }
+	void setHW(bool hw);
+
 	void setDelegate(std::shared_ptr<Delegate> newDelegate)
 	{
 		delegate = newDelegate;
@@ -83,6 +86,7 @@ private:
 	std::weak_ptr<Delegate> delegate;
 	std::mutex mMutex;
 
+	bool hw = false;
 };
 
 //
