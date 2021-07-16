@@ -25,7 +25,6 @@ DeviceApplicationConnectionController::DeviceApplicationConnectionController(
 {
 	this->protocol = std::make_unique<portal::SimpleDataPacketProtocol>();
 	this->deviceConnection = deviceConnection;
-	this->device = deviceConnection->getDevice();
 	should_reconnect = true;
 	worker_stopping = false;
 }
@@ -118,6 +117,12 @@ void DeviceApplicationConnectionController::worker_loop()
             blog(LOG_DEBUG,
                  "[obs-ios-camera-plugin] Device connection is already connecting. Doing nothing.");
                 break;
+
+        case portal::DeviceConnection::State::ImpossibleToConnect:
+            blog(LOG_DEBUG,
+                 "[obs-ios-camera-plugin] Configuration is invalid.");
+            worker_stopping = true;
+            break;
         }
 
 		worker_condition.wait_for(lock, std::chrono::seconds(1));

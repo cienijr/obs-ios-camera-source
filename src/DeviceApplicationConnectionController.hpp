@@ -45,7 +45,8 @@ public:
 
 	auto getState() { return deviceConnection->getState(); }
 
-	std::string getDeviceUUID() { return device->uuid(); };
+    auto getHost() { return deviceConnection->getHost(); }
+    auto getPort() { return deviceConnection->getPort(); }
 
 private:
 
@@ -60,7 +61,6 @@ private:
 	void worker_loop();
 
 	std::unique_ptr<portal::SimpleDataPacketProtocol> protocol;
-	std::shared_ptr<portal::Device> device;
 	std::shared_ptr<portal::DeviceConnection> deviceConnection;
 
 	void processPacket(portal::SimpleDataPacketProtocol::DataPacket packet);

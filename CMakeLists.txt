@@ -168,20 +168,16 @@ endif()
 
 set(portal_HEADERS
 	deps/portal/src/Channel.hpp
-	deps/portal/src/Device.hpp
-	deps/portal/src/Protocol.hpp
+		deps/portal/src/Protocol.hpp
 	deps/portal/src/logging.h
 	deps/portal/src/DeviceConnection.hpp
-	deps/portal/src/DeviceManager.hpp
-)
+		)
 
 set(portal_SOURCES
 	deps/portal/src/Channel.cpp
-	deps/portal/src/Device.cpp
-	deps/portal/src/Protocol.cpp
+        deps/portal/src/Protocol.cpp
 	deps/portal/src/DeviceConnection.cpp
-	deps/portal/src/DeviceManager.cpp
-)
+		)
 
 include_directories(portal include
 	deps/portal/src/
@@ -193,10 +189,10 @@ add_library(portal STATIC
 
 add_subdirectory(deps/libimobiledevice)
 
-target_link_libraries(portal
-	libusbmuxd
-	libimobiledevice
-)
+#target_link_libraries(portal
+#	libusbmuxd
+#	libimobiledevice
+#)
 
 ## -- 
 

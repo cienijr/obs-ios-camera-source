@@ -22,11 +22,9 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 #include <obs-module.h>
 #include <optional>
 
-#include "DeviceManager.hpp"
 #include "DeviceApplicationConnectionController.hpp"
 
 #include <chrono>
-#include <usbmuxd.h>
 #include <obs-avc.h>
 #include <mutex>
 #include <thread>
@@ -40,8 +38,7 @@ with this program. If not, see <https://www.gnu.org/licenses/>
 
 #define blog(level, msg, ...) blog(level, "[obs-ios-camera-plugin] " msg, ##__VA_ARGS__)
 
-class IOSCameraInput : public portal::DeviceManager::Delegate,
-		       public std::enable_shared_from_this<IOSCameraInput> {
+class IOSCameraInput : public std::enable_shared_from_this<IOSCameraInput> {
 public:
 
 	IOSCameraInput(obs_source_t *source_, obs_data_t *settings);
@@ -50,29 +47,13 @@ public:
 	void activate();
 	void deactivate();
 	void loadSettings(obs_data_t *settings);
-	void setDeviceUUID(std::string uuid);
 	void reconnectToDevice();
 	void resetDecoder();
 	void connectToDevice();
 
-	struct MobileCameraDevice {
-		std::string uuid;
-		std::string name;
-	};
+    void setDeviceHostPort(std::string host, int port);
 
-	struct State {
-		std::vector<MobileCameraDevice> devices;
-		std::optional<std::string> selectedDeviceUUID;
-		std::optional<std::string> lastSelectedDeviceUUID;
-	};
-
-	State state;
-
-	std::map<std::string,
-		 std::shared_ptr<DeviceApplicationConnectionController>>
-		connectionControllers;
-
-	portal::DeviceManager deviceManager;
+	std::shared_ptr<DeviceApplicationConnectionController> connectionController;
 
 	obs_source_t *source;
 	obs_data_t *settings;
@@ -88,31 +69,10 @@ public:
 	FFMpegAudioDecoder audioDecoder;
 
 private:
-	void deviceManagerDidUpdateDeviceList(
-		std::map<std::string, portal::Device::shared_ptr> devices);
-	void deviceManagerDidChangeState(
-		portal::DeviceManager::State state);
-	void deviceManagerDidAddDevice(
-		portal::Device::shared_ptr device);
-	void deviceManagerDidRemoveDevice(
-		portal::Device::shared_ptr device);
+    std::optional<std::string> host;
+    std::optional<int> port;
+
+	void setupConnectionController(std::string host, int port);
 };
-
-static auto
-devicesFromPortal(std::map<std::string, portal::Device::shared_ptr> devices)
-{
-	auto list = std::vector<IOSCameraInput::MobileCameraDevice>();
-
-	// Convert the portal list into MobileCameraDevice list
-	for (auto const &[key, value] : devices) {
-		auto device = IOSCameraInput::MobileCameraDevice();
-		device.uuid = value->uuid();
-        device.name = value->name.value_or(value->uuid());
-		list.push_back(device);
-	};
-
-	return list;
-}
-
 
 #endif // OBSIOSCAMERASOURCE_H

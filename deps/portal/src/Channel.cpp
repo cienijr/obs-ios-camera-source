@@ -18,6 +18,9 @@
 
 #include "Channel.hpp"
 #include <iostream>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/poll.h>
 
 namespace portal {
 
@@ -60,7 +63,8 @@ bool Channel::close()
 		WaitForInternalThreadToExit();
 	}
 
-	auto ret = usbmuxd_disconnect(conn);
+//	auto ret = usbmuxd_disconnect(conn);
+	auto ret = ::close(conn);
 
 	return ret;
 }
@@ -71,9 +75,21 @@ bool Channel::send(std::vector<char> data)
 		return false;
 	}
 
-	uint32_t sentBytes = 0;
+#ifndef MSG_NOSIGNAL
+    int flags = 0;
+#else
+    int flags = MSG_NOSIGNAL;
+#endif
 
-	return usbmuxd_send(conn, &data[0], data.size(), &sentBytes);
+    auto ret = ::send(conn, &data[0], data.size(), flags);
+    if (ret < 0) {
+        return true;
+    }
+
+    return false;
+
+//	uint32_t sentBytes = 0;
+//	return usbmuxd_send(conn, &data[0], data.size(), &sentBytes);
 }
 
 void Channel::setState(State state)
@@ -113,6 +129,52 @@ void Channel::StopInternalThread()
 	running = false;
 }
 
+int socket_check_fd(int fd, unsigned int timeout) {
+    fd_set fds;
+    int sret;
+    int eagain;
+    struct timeval to;
+    struct timeval *pto;
+
+    if (fd < 0) {
+        return -1;
+    }
+
+    FD_ZERO(&fds);
+    FD_SET(fd, &fds);
+
+    sret = -1;
+
+    do {
+        if (timeout > 0) {
+            to.tv_sec = (time_t) (timeout / 1000);
+            to.tv_usec = (time_t) ((timeout - (to.tv_sec * 1000)) * 1000);
+            pto = &to;
+        } else {
+            pto = NULL;
+        }
+        eagain = 0;
+        sret = select(fd + 1, &fds, NULL, NULL, pto);
+
+        if (sret < 0) {
+            switch (errno) {
+                case EINTR:
+                    // interrupt signal in select
+                    eagain = 1;
+                    break;
+                case EAGAIN:
+                    break;
+                default:
+                    return -1;
+            }
+        } else if (sret == 0) {
+            return -ETIMEDOUT;
+        }
+    } while (eagain);
+
+    return sret;
+}
+
 // TODO: https://stackoverflow.com/questions/58477291/function-exceeds-stack-size-consider-moving-some-data-to-heap-c6262
 void Channel::InternalThreadEntry()
 {
@@ -128,9 +190,24 @@ void Channel::InternalThreadEntry()
         uint32_t numberOfBytesReceived = 0;
         auto vector = std::vector<char>(numberOfBytesToAskFor);
 
-        int ret = usbmuxd_recv_timeout(conn, vector.data(),
-                           numberOfBytesToAskFor,
-                           &numberOfBytesReceived, 1000);
+        int ret = socket_check_fd(conn, 1000);
+        if (ret > 0)
+        {
+            numberOfBytesReceived = recv(conn, vector.data(), numberOfBytesToAskFor, 0);
+
+            if (ret > 0 && numberOfBytesReceived == 0) {
+                ret = -ECONNRESET;
+            } else if (numberOfBytesReceived < 0) {
+                ret = -errno;
+                numberOfBytesReceived = 0;
+            } else {
+                ret = 0;
+            }
+
+//            ret = usbmuxd_recv_timeout(conn, vector.data(),
+//                                       numberOfBytesToAskFor,
+//                                       &numberOfBytesReceived, 1000);
+        }
 
 		if (ret == 0) {
 			if (getState() == State::Connecting) {

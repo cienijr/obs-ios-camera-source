@@ -19,8 +19,8 @@
 #include "obs-ios-camera-source.h"
 
 #define TEXT_INPUT_NAME obs_module_text("OBSIOSCamera.Title")
-#define SETTING_DEVICE_UUID "setting_device_uuid"
-#define SETTING_DEVICE_UUID_NONE_VALUE "null"
+#define SETTING_DEVICE_HOST "setting_device_host"
+#define SETTING_DEVICE_PORT "setting_device_port"
 #define SETTING_PROP_LATENCY "latency"
 #define SETTING_PROP_LATENCY_NORMAL 0
 #define SETTING_PROP_LATENCY_LOW 1
@@ -29,7 +29,7 @@
 #define SETTING_PROP_FFMPEG_HARDWARE_DECODER "setting_use_ffmpeg_hw_decoder"
 
 IOSCameraInput::IOSCameraInput(obs_source_t *source_, obs_data_t *settings)
-	: deviceManager(), source(source_), settings(settings)
+	: source(source_), settings(settings)
 {
 	blog(LOG_INFO, "Creating instance of plugin!");
 
@@ -46,98 +46,19 @@ IOSCameraInput::IOSCameraInput(obs_source_t *source_, obs_data_t *settings)
 
 	videoDecoder = &ffmpegVideoDecoder;
 
-	state = State();
 	active = true;
 	loadSettings(settings);
-
-	deviceManager.onDeviceManagerDidUpdateDeviceListCallback =
-		[this](auto devices) {
-			this->deviceManagerDidUpdateDeviceList(devices);
-		};
-	deviceManager.onDeviceManagerDidChangeStateCallback =
-		[this](auto state) {
-			this->deviceManagerDidChangeState(state);
-		};
-	deviceManager.onDeviceManagerDidAddDeviceCallback =
-		[this](auto device) {
-			this->deviceManagerDidAddDevice(device);
-		};
-	deviceManager.onDeviceManagerDidRemoveDeviceCallback =
-		[this](auto device) {
-			this->deviceManagerDidRemoveDevice(device);
-		};
-
-	deviceManager.start();
 };
 
-void IOSCameraInput::deviceManagerDidUpdateDeviceList(
-	std::map<std::string, portal::Device::shared_ptr> devices)
+void IOSCameraInput::setupConnectionController(std::string host, int port)
 {
-	blog(LOG_INFO, "Updated device list");
-	auto cameraDevices = devicesFromPortal(devices);
-	state.devices = cameraDevices;
-
-	/// If there is one device in the list, then we should attempt to connect to it.
-	/// I would guess that this is the main use case - one device, and it's good to
-	/// attempt to automatically connect in this case, and 'just work'.
-	///
-	/// If there are multiple devices, then we can't just connect to all devices.
-	/// We cannot currently detect if a device is connected to another instance of the
-	/// plugin, so it's not safe to attempt to connect to any devices automatically
-	/// as we could be connecting to a device that is currently connected elsewhere.
-	/// Due to this, if there are multiple devices, we won't do anything and will let
-	/// the user configure the instance of the plugin.
-	if (state.devices.size() == 1) {
-
-		auto device = state.devices[0];
-
-		auto isFirstTimeConnectingToDevice = state.selectedDeviceUUID ==
-						     std::nullopt;
-		auto isDeviceConnected =
-			connectionControllers[device.uuid]->getState() ==
-			portal::DeviceConnection::State::Connected;
-
-		auto isThisDeviceTheSameAsLastConnectedDevice =
-			device.uuid.compare(
-				state.selectedDeviceUUID.value_or("null")) == 0;
-
-		if (isFirstTimeConnectingToDevice ||
-		    (isThisDeviceTheSameAsLastConnectedDevice &&
-		     !isDeviceConnected)) {
-
-			setDeviceUUID(device.uuid);
-
-			// Set the setting so that the UI in OBS Studio is updated
-			obs_data_set_string(this->settings, SETTING_DEVICE_UUID,
-					    device.uuid.c_str());
-		}
-
-	} else {
-		// User will have to configure the plugin manually when more than one device is plugged in
-		// due to the fact that multiple instances of the plugin can't subscribe to device events...
-
-		connectToDevice();
-	}
-}
-
-void IOSCameraInput::deviceManagerDidChangeState(
-	portal::DeviceManager::State state)
-{
-	blog(LOG_INFO, "deviceManagerDidChangeState %i", state);
-	std::cout << "DeviceManager::didChangeState: " << state << std::endl;
-}
-
-void IOSCameraInput::deviceManagerDidAddDevice(portal::Device::shared_ptr device)
-{
-	std::cout << "Did Add device " << device->uuid() << std::endl;
+	std::cout << "Did Add device " << host << ":" << port << std::endl;
 
 	// Create the connection, and the connection manager, but don't start anything just yet
-	auto deviceConnection =
-		std::make_shared<portal::DeviceConnection>(device, 2019);
-	auto deviceConnectionController =
-		std::make_shared<DeviceApplicationConnectionController>(
-			deviceConnection);
-	connectionControllers[device->uuid()] = deviceConnectionController;
+	auto deviceConnection = std::make_shared<portal::DeviceConnection>(host, port);
+	auto deviceConnectionController = std::make_shared<DeviceApplicationConnectionController>(deviceConnection);
+
+	connectionController = deviceConnectionController;
 
 	// Setup the callbacks
 
@@ -161,18 +82,8 @@ void IOSCameraInput::deviceManagerDidAddDevice(portal::Device::shared_ptr device
 			blog(LOG_INFO, "Exception caught...");
 		}
 	};
-}
 
-void IOSCameraInput::deviceManagerDidRemoveDevice(
-	portal::Device::shared_ptr device)
-{
-	std::cout << "Did Remove device " << device->uuid() << std::endl;
-
-	if (auto deviceConnectionController =
-		    connectionControllers[device->uuid()]) {
-		deviceConnectionController->disconnect();
-		connectionControllers[device->uuid()] = nullptr;
-	}
+	resetDecoder();
 }
 
 IOSCameraInput ::~IOSCameraInput()
@@ -201,25 +112,19 @@ void IOSCameraInput::loadSettings(obs_data_t *settings)
 	disconnectOnInactive = obs_data_get_bool(
 		settings, SETTING_PROP_DISCONNECT_ON_INACTIVE);
 
-	auto device_uuid = obs_data_get_string(settings, SETTING_DEVICE_UUID);
-	state.selectedDeviceUUID = device_uuid;
+	auto device_host = obs_data_get_string(settings, SETTING_DEVICE_HOST);
+	auto device_port = obs_data_get_int(settings, SETTING_DEVICE_PORT);
 
 	blog(LOG_INFO, "Loaded Settings");
 
-	setDeviceUUID(device_uuid);
+	setDeviceHostPort(device_host, device_port);
 }
 
-void IOSCameraInput::setDeviceUUID(std::string uuid)
+void IOSCameraInput::setDeviceHostPort(std::string host, int port)
 {
-	state.lastSelectedDeviceUUID = state.selectedDeviceUUID;
-
-	if (uuid == SETTING_DEVICE_UUID_NONE_VALUE) {
-		state.selectedDeviceUUID = std::nullopt;
-	} else {
-		state.selectedDeviceUUID = uuid;
-	}
-
-	connectToDevice();
+    this->host = host;
+    this->port = port;
+    connectToDevice();
 }
 
 void IOSCameraInput::reconnectToDevice()
@@ -241,20 +146,15 @@ void IOSCameraInput::resetDecoder()
 
 void IOSCameraInput::connectToDevice()
 {
-	blog(LOG_DEBUG, "Connecting to device: %s",
-	     state.selectedDeviceUUID.value_or("none").c_str());
-
-	auto isConnectingToDifferentDevice = state.lastSelectedDeviceUUID !=
-					     state.selectedDeviceUUID;
+    auto host = this->host.value_or("");
+    auto port = this->port.value_or(0);
 
 	// If there is no currently selected device, disconnect from all
 	// connection controllers
-	if (!state.selectedDeviceUUID.has_value()) {
-		for (const auto &[uuid, connectionController] :
-		     connectionControllers) {
-			if (connectionController != nullptr) {
-				connectionController->disconnect();
-			}
+	if (host.empty() || port <= 0) {
+	    if (connectionController != nullptr) {
+	        connectionController->disconnect();
+	        connectionController = nullptr;
 		}
 
 		// Clear the video frame when a setting changes
@@ -262,73 +162,31 @@ void IOSCameraInput::connectToDevice()
 		return;
 	}
 
-	// https://stackoverflow.com/questions/44217316/how-do-i-use-stdoptional-in-c
-	// Apple compiler hasn't implemented std::optional.value() in < macos 10.14,
-	// work around this by fetching the value by * method.
-	std::string selectedUUID = *state.selectedDeviceUUID;
+    blog(LOG_DEBUG, "Connecting to %s:%d", host.c_str(), port);
 
-	// Disconnect all connection controllers
-	for (const auto &[uuid, connectionController] : connectionControllers) {
-		if (connectionController != nullptr) {
-			connectionController->disconnect();
-		}
+	if (connectionController != nullptr) {
+	    if (connectionController->getHost() != host || connectionController->getPort() != port) {
+	        // connection changed
+	        connectionController->disconnect();
+            setupConnectionController(host, port);
+	    }
+	} else {
+        setupConnectionController(host, port);
 	}
 
-	if (isConnectingToDifferentDevice) {
-		resetDecoder();
-	}
-
-	auto shouldConnect = !(disconnectOnInactive == true && active == false);
+	auto shouldConnect = !disconnectOnInactive || active;
 
 	// Then connect to the selected device if the plugin is active, or inactive and connected on inactive.
-	for (const auto &[uuid, connectionController] : connectionControllers) {
-		if (connectionController != nullptr) {
-			if (uuid == selectedUUID && shouldConnect) {
-				blog(LOG_DEBUG,
-				     "Starting connection controller");
-				connectionController->start();
-			}
-		}
+	if (shouldConnect) {
+	    if (connectionController != nullptr) {
+            blog(LOG_DEBUG, "Starting connection controller");
+            connectionController->start();
+//            connectionController->start(host, port);
+	    }
 	}
 }
 
 #pragma mark - Settings Config
-
-static bool refresh_devices(obs_properties_t *props, obs_property_t *p,
-			    void *data)
-{
-	UNUSED_PARAMETER(p);
-
-	auto cameraInput = reinterpret_cast<IOSCameraInput *>(data);
-
-	obs_property_t *dev_list = obs_properties_get(props, SETTING_DEVICE_UUID);
-	obs_property_list_clear(dev_list);
-
-	obs_property_list_add_string(dev_list, "None",
-				     SETTING_DEVICE_UUID_NONE_VALUE);
-
-	int index = 1;
-	std::for_each(
-		cameraInput->state.devices.begin(),
-		cameraInput->state.devices.end(),
-		[dev_list, &index](IOSCameraInput::MobileCameraDevice &device) {
-
-            auto uuid = device.uuid.c_str();
-			auto name = device.name.c_str();
-			obs_property_list_add_string(dev_list, name, uuid);
-
-			// Disable the row if the device is selected as we can only
-			// connect to one device to one source.
-			// Disabled for now as I'm not sure how to sync status across
-			// multiple instances of the plugin.
-			//                      auto isConnected = deviceMap.second->isConnected();
-			//                      obs_property_list_item_disable(dev_list, index, isConnected);
-
-			index++;
-		});
-
-	return true;
-}
 
 static bool reconnect_to_device(obs_properties_t *props, obs_property_t *p,
 				void *data)
@@ -390,15 +248,16 @@ static obs_properties_t *GetIOSCameraProperties(void *data)
 	UNUSED_PARAMETER(data);
 	obs_properties_t *ppts = obs_properties_create();
 
-	obs_property_t *dev_list = obs_properties_add_list(
-		ppts, SETTING_DEVICE_UUID, "iOS Device", OBS_COMBO_TYPE_LIST,
-		OBS_COMBO_FORMAT_STRING);
-	obs_property_list_add_string(dev_list, "", "");
+    obs_properties_add_text(
+            ppts, SETTING_DEVICE_HOST,
+            obs_module_text("OBSIOSCamera.Settings.Device.Host"),
+            OBS_TEXT_DEFAULT);
+    obs_properties_add_int(
+            ppts, SETTING_DEVICE_PORT,
+            obs_module_text("OBSIOSCamera.Settings.Device.Port"),
+            0, 65535,
+            1);
 
-	refresh_devices(ppts, dev_list, data);
-
-	obs_properties_add_button(ppts, "setting_refresh_devices",
-				  "Refresh Devices", refresh_devices);
 	obs_properties_add_button(ppts, "setting_button_connect_to_device",
 				  "Reconnect to Device", reconnect_to_device);
 
@@ -435,7 +294,9 @@ static obs_properties_t *GetIOSCameraProperties(void *data)
 
 static void GetIOSCameraDefaults(obs_data_t *settings)
 {
-	obs_data_set_default_string(settings, SETTING_DEVICE_UUID, "");
+	obs_data_set_default_string(settings, SETTING_DEVICE_HOST, "");
+	obs_data_set_default_int(settings, SETTING_DEVICE_PORT, 2019);
+
 	obs_data_set_default_int(settings, SETTING_PROP_LATENCY,
 				 SETTING_PROP_LATENCY_LOW);
 #ifdef __APPLE__
@@ -449,17 +310,22 @@ static void GetIOSCameraDefaults(obs_data_t *settings)
 
 static void SaveIOSCameraInput(void *data, obs_data_t *settings)
 {
-	UNUSED_PARAMETER(data);
-	UNUSED_PARAMETER(settings);
+    IOSCameraInput *input = reinterpret_cast<IOSCameraInput *>(data);
+
+    // Connect to the device
+	auto deviceHost = obs_data_get_string(settings, SETTING_DEVICE_HOST);
+	auto devicePort = obs_data_get_int(settings, SETTING_DEVICE_PORT);
+	input->setDeviceHostPort(deviceHost, devicePort);
 }
 
 static void UpdateIOSCameraInput(void *data, obs_data_t *settings)
 {
 	IOSCameraInput *input = reinterpret_cast<IOSCameraInput *>(data);
 
-	// Connect to the device
-	auto uuid = obs_data_get_string(settings, SETTING_DEVICE_UUID);
-	input->setDeviceUUID(uuid);
+    // Connect to the device
+//	auto deviceHost = obs_data_get_string(settings, SETTING_DEVICE_HOST);
+//	auto devicePort = obs_data_get_int(settings, SETTING_DEVICE_PORT);
+//	input->setDeviceHostPort(deviceHost, devicePort);
 
 	const bool is_unbuffered =
 		(obs_data_get_int(settings, SETTING_PROP_LATENCY) ==

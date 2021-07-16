@@ -22,22 +22,68 @@ namespace portal {
 
 #include <iostream>
 #include <type_traits>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
 template <typename T>
 std::ostream& operator<<(typename std::enable_if<std::is_enum<T>::value, std::ostream>::type& stream, const T& e)
 {
     return stream << static_cast<typename std::underlying_type<T>::type>(e);
 }
 
-DeviceConnection::DeviceConnection(Device::shared_ptr device, int port)
+DeviceConnection::DeviceConnection(std::string host, int port)
 {
+    this->host = host;
     this->port = port;
-    this->device = device;
     this->_state = State::Disconnected;
 }
 
 DeviceConnection::~DeviceConnection()
 {
     portal_log("%s: Deallocating\n", __func__);
+}
+
+int create_socket(std::string host, int port)
+{
+    struct sockaddr_in local = {
+            .sin_family = AF_INET,
+            .sin_port = htons(port),
+    };
+
+    if (port < 1 || port > 65535) {
+        std::cout << "Invalid port: " << port << std::endl;
+        return -EINVAL;
+    }
+
+    if (inet_pton(AF_INET, host.c_str(), &local.sin_addr) <= 0) {
+        std::cout << "Invalid host: " << host << std::endl;
+        return -EINVAL;
+    }
+
+    auto fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) {
+        std::cout << "Failed to create socket: " << errno << std::endl;
+        return -errno;
+    }
+
+    int val = 1;
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof val) < 0) {
+        auto _errno = errno;
+        std::cout << "Failed to set SO_REUSEADDR: " << _errno << std::endl;
+        close(fd);
+        return -_errno;
+    }
+
+    if (connect(fd, reinterpret_cast<const sockaddr *>(&local), sizeof(local)) < 0) {
+        auto _errno = errno;
+        std::cout << "Failed to connect to " << host << ":" << port << " - " << _errno << std::endl;
+        close(fd);
+        return -_errno;
+    }
+
+    return fd;
 }
 
 bool DeviceConnection::connect()
@@ -56,17 +102,22 @@ bool DeviceConnection::connect()
 			std::chrono::milliseconds(connectTimeoutMs);
 
 	while (std::chrono::steady_clock::now() < deadline) {
-		int socketHandle =
-			usbmuxd_connect(device->usbmuxdHandle(), port);
-		if (socketHandle > 0) {
+        int socketHandle = create_socket(host, port);
+		if (socketHandle >= 0) {
 			std::cout << "got connection: " << socketHandle
 				  << std::endl;
 			channel = std::make_shared<Channel>(port, socketHandle);
 			channel->setDelegate(shared_from_this());
 			channel->start();
-			return 0;
+			return false;
 		}
+
 		retval = socketHandle;
+
+		if (socketHandle == -EINVAL) {
+            setState(State::ImpossibleToConnect);
+            return true;
+		}
 	}
 
 	setState(State::FailedToConnect);

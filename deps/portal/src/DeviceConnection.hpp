@@ -21,7 +21,6 @@
 #include <thread>
 #include <usbmuxd.h>
 
-#include "Device.hpp"
 #include "Protocol.hpp"
 #include "Channel.hpp"
 
@@ -35,14 +34,16 @@ public:
     enum class State {
 	    // Not attempted to connect yet
         Disconnected = 0,
-	// Connecting
+	    // Connecting
         Connecting,
-	// Connected & recieving data
+	    // Connected & recieving data
         Connected,
-	// Failed to connect
-	FailedToConnect,
-	// Was connected, but the connected errored out for some reason
-        Errored
+	    // Failed to connect
+	    FailedToConnect,
+	    // Was connected, but the connected errored out for some reason
+        Errored,
+        // invalid host / port
+        ImpossibleToConnect
     };
 
     class Delegate {
@@ -53,7 +54,7 @@ public:
         virtual ~Delegate(){};
     };
 
-    DeviceConnection(Device::shared_ptr device, int port);
+    DeviceConnection(std::string host, int port);
     ~DeviceConnection();
 
     bool connect();
@@ -70,6 +71,10 @@ public:
         delegate = newDelegate;
     }
 
+    std::string getHost() {
+        return host;
+    }
+
     int getPort()
     {
         return port;
@@ -79,17 +84,15 @@ public:
 	    return _state;
 	}
 
-    Device::shared_ptr getDevice() { return device; };
-
     void channelDidChangeState(Channel::State state);
     void channelDidReceiveData(std::vector<char> data);
     void channelDidReceivePacket(std::vector<char> packet, int type, int tag);
     void channelDidStop();
 
 private:
+    std::string host;
     int port;
-    Device::shared_ptr device;
-    
+
     void setState(State state);
 
     State _state;
