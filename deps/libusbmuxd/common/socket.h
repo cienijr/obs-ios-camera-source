@@ -22,13 +22,18 @@
 #ifndef SOCKET_SOCKET_H
 #define SOCKET_SOCKET_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdlib.h>
 #include <stdint.h>
 
-enum fd_mode {
-	FDM_READ,
-	FDM_WRITE,
-	FDM_EXCEPT
+enum fd_mode
+{
+    FDM_READ,
+    FDM_WRITE,
+    FDM_EXCEPT
 };
 typedef enum fd_mode fd_mode;
 
@@ -57,7 +62,7 @@ int socket_close(int fd);
 int socket_receive(int fd, void *data, size_t size);
 int socket_peek(int fd, void *data, size_t size);
 int socket_receive_timeout(int fd, void *data, size_t size, int flags,
-					 unsigned int timeout);
+                           unsigned int timeout);
 
 int socket_send(int fd, void *data, size_t size);
 
@@ -65,4 +70,8 @@ void socket_set_verbose(int level);
 
 const char *socket_addr_to_string(struct sockaddr *addr, char *addr_out, size_t addr_out_size);
 
-#endif	/* SOCKET_SOCKET_H */
+#ifdef __cplusplus
+}
+#endif
+
+#endif    /* SOCKET_SOCKET_H */
