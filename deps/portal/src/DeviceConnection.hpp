@@ -19,7 +19,6 @@
 #pragma once
 
 #include <thread>
-#include <usbmuxd.h>
 
 #include "Protocol.hpp"
 #include "Channel.hpp"

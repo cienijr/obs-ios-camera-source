@@ -22,10 +22,13 @@ namespace portal {
 
 #include <iostream>
 #include <type_traits>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
+
+#include <socket.h>
+
+//#include <sys/socket.h>
+//#include <netinet/in.h>
+//#include <arpa/inet.h>
+//#include <unistd.h>
 
 template <typename T>
 std::ostream& operator<<(typename std::enable_if<std::is_enum<T>::value, std::ostream>::type& stream, const T& e)
@@ -45,47 +48,6 @@ DeviceConnection::~DeviceConnection()
     portal_log("%s: Deallocating\n", __func__);
 }
 
-int create_socket(std::string host, int port)
-{
-    struct sockaddr_in local = {
-            .sin_family = AF_INET,
-            .sin_port = htons(port),
-    };
-
-    if (port < 1 || port > 65535) {
-        std::cout << "Invalid port: " << port << std::endl;
-        return -EINVAL;
-    }
-
-    if (inet_pton(AF_INET, host.c_str(), &local.sin_addr) <= 0) {
-        std::cout << "Invalid host: " << host << std::endl;
-        return -EINVAL;
-    }
-
-    auto fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd < 0) {
-        std::cout << "Failed to create socket: " << errno << std::endl;
-        return -errno;
-    }
-
-    int val = 1;
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof val) < 0) {
-        auto _errno = errno;
-        std::cout << "Failed to set SO_REUSEADDR: " << _errno << std::endl;
-        close(fd);
-        return -_errno;
-    }
-
-    if (connect(fd, reinterpret_cast<const sockaddr *>(&local), sizeof(local)) < 0) {
-        auto _errno = errno;
-        std::cout << "Failed to connect to " << host << ":" << port << " - " << _errno << std::endl;
-        close(fd);
-        return -_errno;
-    }
-
-    return fd;
-}
-
 bool DeviceConnection::connect()
 {
 	auto state = getState();
@@ -97,12 +59,11 @@ bool DeviceConnection::connect()
 	setState(State::Connecting);
 
 	auto connectTimeoutMs = 200;
-	int retval = 0;
 	auto deadline = std::chrono::steady_clock::now() +
 			std::chrono::milliseconds(connectTimeoutMs);
 
 	while (std::chrono::steady_clock::now() < deadline) {
-        int socketHandle = create_socket(host, port);
+        int socketHandle = socket_connect(host.c_str(), port);
 		if (socketHandle >= 0) {
 			std::cout << "got connection: " << socketHandle
 				  << std::endl;
@@ -110,13 +71,15 @@ bool DeviceConnection::connect()
 			channel->setDelegate(shared_from_this());
 			channel->start();
 			return false;
-		}
-
-		retval = socketHandle;
-
-		if (socketHandle == -EINVAL) {
-            setState(State::ImpossibleToConnect);
-            return true;
+		} else {
+		    // TODO handle impossible to connect (invalid host / port)
+		    /*
+		    auto result = errno;
+            if (socketHandle == -EINVAL) {
+                setState(State::ImpossibleToConnect);
+                return true;
+            }
+            */
 		}
 	}
 

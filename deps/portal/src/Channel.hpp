@@ -20,7 +20,6 @@
 
 #include <thread>
 #include <mutex>
-#include <usbmuxd.h>
 
 #include "Protocol.hpp"
 
