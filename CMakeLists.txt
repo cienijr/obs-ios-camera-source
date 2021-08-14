@@ -171,14 +171,12 @@ set(portal_HEADERS
 	deps/portal/src/Protocol.hpp
 	deps/portal/src/logging.h
 	deps/portal/src/DeviceConnection.hpp
-	deps/libusbmuxd/common/socket.h
 )
 
 set(portal_SOURCES
 	deps/portal/src/Channel.cpp
 	deps/portal/src/Protocol.cpp
 	deps/portal/src/DeviceConnection.cpp
-	deps/libusbmuxd/common/socket.c
 )
 
 include_directories(portal include
@@ -191,10 +189,10 @@ add_library(portal STATIC
 
 add_subdirectory(deps/libimobiledevice)
 
-#target_link_libraries(portal
-#	libusbmuxd
+target_link_libraries(portal
+	libusbmuxd
 #	libimobiledevice
-#)
+)
 
 ## -- 
 
