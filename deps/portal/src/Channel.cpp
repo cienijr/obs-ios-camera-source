@@ -116,7 +116,8 @@ void Channel::WaitForInternalThreadToExit()
     running = false;
     std::unique_lock<std::mutex> lock(worker_mutex);
     if (_thread.joinable()) {
-        _thread.join();
+        //_thread.join();
+	std::cout << "Channel::WaitForInternalThreadToExit - skipping join" << std::endl;
     }
     lock.unlock();
 }
