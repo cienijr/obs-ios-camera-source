@@ -106,7 +106,7 @@ jobs:
           CI\package-windows.cmd
 
       - name: Upload a Build Artifact
-        uses: actions/upload-artifact@v2.2.3
+        uses: actions/upload-artifact@v4
         with:
           name: build-windows
           path: obs-ios-camera-source/package
