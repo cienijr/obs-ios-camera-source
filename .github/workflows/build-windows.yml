@@ -28,7 +28,7 @@ jobs:
     runs-on: windows-2022
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
         with:
           path: obs-ios-camera-source
           submodules: true
@@ -39,7 +39,7 @@ jobs:
           CI\install-qt-win.cmd
 
       - name: Restore cached iOS Camera Plugin Dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v5
         with:
           key: ${{ runner.os }}-obscam-vcpkg
           path: |
@@ -51,7 +51,7 @@ jobs:
           CI\install-ios-camera-dependencies.cmd
 
       - name: Restore cached OBS Studio dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v5
         with:
           key: ${{ runner.os }}-obsdeps
           path: |
@@ -63,7 +63,7 @@ jobs:
           CI\download-obs-deps.cmd
 
       - name: Restore cached OBS Studio builds
-        uses: actions/cache@v2
+        uses: actions/cache@v5
         with:
           key: ${{ runner.os }}-obsbuild
           path: |
@@ -106,7 +106,7 @@ jobs:
           CI\package-windows.cmd
 
       - name: Upload a Build Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-windows
           path: obs-ios-camera-source/package
