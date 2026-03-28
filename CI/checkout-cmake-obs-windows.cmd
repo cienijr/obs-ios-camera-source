@@ -120,11 +120,11 @@ if defined BuildOBS (
 	echo:
 	echo:
 	
-    REM echo   Building obs-studio %OBSLatestTag% 32-bit ^(Build Config: %build_config%^)...
-	REM call msbuild /m /p:Configuration=%build_config% %OBSPath%\build32\obs-studio.sln
+    echo   Building obs-studio %OBSLatestTag% 32-bit ^(Build Config: %build_config%^)...
+	call msbuild /m /p:Configuration=%build_config% %OBSPath%\build32\obs-studio.sln
 	
-    REM echo   Building obs-studio %OBSLatestTag% 64-bit ^(Build Config: %build_config%^)...
-	REM call msbuild /m /p:Configuration=%build_config% %OBSPath%\build64\obs-studio.sln
+    echo   Building obs-studio %OBSLatestTag% 64-bit ^(Build Config: %build_config%^)...
+	call msbuild /m /p:Configuration=%build_config% %OBSPath%\build64\obs-studio.sln
 	
     cd ..
 	git describe --tags --abbrev=0 > "%OBSPath%\obs-studio-last-tag-built.txt"
