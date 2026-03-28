@@ -106,7 +106,7 @@ void Channel::setState(State state)
 /** Returns true if the thread was successfully started, false if there was an error starting the thread */
 bool Channel::StartInternalThread()
 {
-	_thread = std::thread(InternalThreadEntryFunc, this);
+	_thread = std::thread(Channel::InternalThreadEntry, std::weak_ptr<Channel>(shared_from_this()));
 	return true;
 }
 
@@ -116,8 +116,8 @@ void Channel::WaitForInternalThreadToExit()
     running = false;
     std::unique_lock<std::mutex> lock(worker_mutex);
     if (_thread.joinable()) {
-        //_thread.join();
-	std::cout << "Channel::WaitForInternalThreadToExit - skipping join" << std::endl;
+        _thread.detach();
+	std::cout << "Channel::WaitForInternalThreadToExit - detached thread" << std::endl;
     }
     lock.unlock();
 }
@@ -128,12 +128,21 @@ void Channel::StopInternalThread()
 }
 
 // TODO: https://stackoverflow.com/questions/58477291/function-exceeds-stack-size-consider-moving-some-data-to-heap-c6262
-void Channel::InternalThreadEntry()
+void Channel::InternalThreadEntry(std::weak_ptr<Channel> weak_this)
 {
-	while (running) {
-        std::unique_lock<std::mutex> lock(worker_mutex);
+	while (true) {
+        auto shared_this = weak_this.lock();
+        if (!shared_this) {
+            break;
+        }
 
-        if (getState() == State::Errored) {
+        if (!shared_this->running) {
+            break;
+        }
+
+        std::unique_lock<std::mutex> lock(shared_this->worker_mutex);
+
+        if (shared_this->getState() == State::Errored) {
             return;
         }
 
@@ -142,7 +151,7 @@ void Channel::InternalThreadEntry()
         uint32_t numberOfBytesReceived = 0;
         auto vector = std::vector<char>(numberOfBytesToAskFor);
 
-        int ret = socket_receive_timeout(conn, vector.data(), numberOfBytesToAskFor, 0, 1000);
+        int ret = socket_receive_timeout(shared_this->conn, vector.data(), numberOfBytesToAskFor, 0, 1000);
         if (ret < 0) {
             numberOfBytesReceived = 0;
         } else {
@@ -155,14 +164,14 @@ void Channel::InternalThreadEntry()
 //                                       &numberOfBytesReceived, 1000);
 
 		if (ret == 0) {
-			if (getState() == State::Connecting) {
-				setState(State::Connected);
+			if (shared_this->getState() == State::Connecting) {
+				shared_this->setState(State::Connected);
 			}
 
 			if (numberOfBytesReceived > 0) {
 				vector.resize(numberOfBytesReceived);
 
-                if (auto spt = delegate.lock()) {
+                if (auto spt = shared_this->delegate.lock()) {
                     spt->channelDidReceiveData(
                         vector);
                 }
@@ -179,8 +188,8 @@ void Channel::InternalThreadEntry()
             // Unlock now as the `close()` function also requires a lock
             lock.unlock();
 			portal_log("There was an error receiving data");
-			close();
-			setState(State::Errored);
+			shared_this->close();
+			shared_this->setState(State::Errored);
 		}
 	}
 }

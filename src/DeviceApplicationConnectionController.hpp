@@ -58,7 +58,7 @@ private:
 	std::condition_variable worker_condition;
 	std::mutex worker_mutex;
 	std::thread worker_thread;
-	void worker_loop();
+	static void worker_loop(std::weak_ptr<DeviceApplicationConnectionController> weak_this);
 
 	std::unique_ptr<portal::SimpleDataPacketProtocol> protocol;
 	std::shared_ptr<portal::DeviceConnection> deviceConnection;
