@@ -85,13 +85,7 @@ private:
 	bool StartInternalThread();
 	void WaitForInternalThreadToExit();
 	void StopInternalThread();
-	void InternalThreadEntry();
-
-	static void *InternalThreadEntryFunc(void *This)
-	{
-		((portal::Channel *)This)->InternalThreadEntry();
-		return NULL;
-	}
+	static void InternalThreadEntry(std::weak_ptr<Channel> weak_this);
 
 	std::mutex worker_mutex;
 	std::thread _thread;

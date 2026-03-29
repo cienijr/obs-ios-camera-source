@@ -1,0 +1,168 @@
+name: main-windows
+
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  workflow_dispatch:
+
+jobs:
+  windows:
+    name: "Windows 32/64-bit"
+    environment: production
+    runs-on: [windows-2022]
+    if: contains(github.event.head_commit.message, '[skip ci]') != true
+    env:
+      QT_CACHE_VERSION: "3" # Change whenever updating OBS dependencies URL, in order to force a cache reset
+      QT_VERSION: "6.3.1"
+      VCPKG_CACHE_VERSION: "1"
+      WINDOWS_DEPS_CACHE_VERSION: "3" # Change whenever updating Qt dependency URL, in order to force a cache reset
+      WINDOWS_DEPS_VERSION: "2019"
+      CMAKE_GENERATOR: "Visual Studio 17 2022"
+      CMAKE_SYSTEM_VERSION: "10.0"
+    steps:
+      - name: "Add msbuild to PATH"
+        uses: microsoft/setup-msbuild@v1.0.2
+      - name: "Checkout obs-ios-camera-source"
+        uses: actions/checkout@v2
+        with:
+          path: ${{ github.workspace }}/obs-ios-camera-source
+          submodules: "recursive"
+      - name: "Checkout OBS-Studio"
+        uses: actions/checkout@v2
+        with:
+          repository: obsproject/obs-studio
+          path: ${{ github.workspace }}/obs-studio
+          submodules: "recursive"
+      - name: "Get OBS-Studio Git Info"
+        shell: bash
+        working-directory: ${{ github.workspace }}/obs-studio
+        run: |
+          git fetch --prune --unshallow
+          echo "OBS_GIT_TAG=28.0.0" >> $GITHUB_ENV
+#          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+#          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+      - name: "Checkout last OBS-Studio release (${{ env.OBS_GIT_TAG }})"
+        shell: bash
+        working-directory: ${{ github.workspace }}/obs-studio
+        run: |
+          git checkout ${{ env.OBS_GIT_TAG }}
+          git submodule update
+      - name: "Get obs-ios-camera-source Git Info"
+        shell: bash
+        working-directory: ${{ github.workspace }}/obs-ios-camera-source
+        run: |
+          git fetch --prune --unshallow
+          GIT_HASH=$(git rev-parse --short HEAD)
+          echo "GIT_HASH=$GIT_HASH" >> $GITHUB_ENV
+          GIT_TAG=$(git describe --exact-match --tags --abbrev=0) || GIT_TAG=""
+          echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
+          if [ "$GIT_TAG" ] ; then \
+            VERSION="$GIT_TAG" \
+            VERSION_SUFFIX=$(echo "$GIT_TAG" | cut -c6-20) ; \
+          else \
+            VERSION="$GIT_HASH-git" \
+            VERSION_SUFFIX="-$GIT_HASH-git" ; \
+          fi
+          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "CMAKE_VERSION_SUFFIX=$VERSION_SUFFIX" >> $GITHUB_ENV
+      - name: "Restore Cached Qt"
+        id: qtcache
+        uses: actions/cache@v3
+        with:
+          path: windows-deps-qt5-2022-08-02-x64.zip
+          key: "qtdep-${{ env.QT_CACHE_VERSION }} | ${{ runner.os }}"
+          restore-keys: |
+            qtdep-${{ env.QT_CACHE_VERSION }} | ${{ runner.os }}
+      - name: "Download Prerequisite: Qt"
+        if: steps.qtcache.outputs.cache-hit != 'true'
+        run: |
+          curl -kLO https://github.com/obsproject/obs-deps/releases/download/2022-08-02/windows-deps-qt5-2022-08-02-x64.zip -f --retry 5 -C -
+      - name: "Extract Prerequisite: Qt"
+        run: |
+          7z x windows-deps-qt5-2022-08-02-x64.zip -o"${{ github.workspace }}\cmbuild\QT"
+      - name: "Restore Cached Vcpkg dependencies"
+        id: vcpkgcache
+        uses: actions/cache@v3
+        with:
+          path: "C:/vcpkg/"
+          key: "vcpkgcachedeps-${{ env.VCPKG_CACHE_VERSION }} | ${{ runner.os }}"
+          restore-keys: |
+            vcpkgcachedeps-${{ env.VCPKG_CACHE_VERSION }} | ${{ runner.os }}
+      - name: "Install Camera Plugin Dependencies"
+        run: |
+          vcpkg integrate install
+          vcpkg install openssl:x64-windows-static
+      - name: "Restore Cached OBS-Studio Dependencies"
+        id: obscache
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}\cmbuild\deps\**
+          key: "obsdep-${{ env.WINDOWS_DEPS_CACHE_VERSION }} | ${{ runner.os }}"
+          restore-keys: |
+            obsdep-${{ env.WINDOWS_DEPS_CACHE_VERSION }} | ${{ runner.os }}
+      - name: "Install Prerequisite: Pre-built OBS-Studio dependencies"
+        if: steps.obscache.outputs.cache-hit != 'true'
+        run: |
+          curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -f --retry 5 -C -
+          7z x dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -o"${{ github.workspace }}\cmbuild\deps"
+#          curl -kLO https://github.com/obsproject/obs-deps/releases/download/2022-08-02/windows-deps-2022-08-02-x64.zip -f --retry 5 -C -
+#          7z x windows-deps-2022-08-02-x64.zip -o"${{ github.workspace }}\cmbuild\deps"
+      - name: "Restore OBS-Studio 64-bit Build v${{ env.OBS_GIT_TAG }} from Cache"
+        id: build-cache-obs-64
+        uses: actions/cache@v3
+        env:
+          CACHE_NAME: "build-cache-obs-64"
+        with:
+          path: ${{ github.workspace }}/obs-studio/build64
+          key: ${{ runner.os }}-${{ env.CACHE_NAME }}-${{ env.OBS_GIT_TAG }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.CACHE_NAME }}-
+      - name: "Configure OBS-Studio 64-bit"
+        if: steps.build-cache-obs-64.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}/obs-studio
+        run: |
+          if(!(Test-Path -Path ".\build64")){New-Item -ItemType directory -Path .\build64}
+          cd .\build64
+          cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT" -DDepsPath="${{ github.workspace }}\cmbuild\deps\win64" -DCOPIED_DEPENDENCIES=NO -DCOPY_DEPENDENCIES=YES -DBUILD_BROWSER=OFF ..
+      - name: "Build OBS-Studio 64-bit"
+        if: steps.build-cache-obs-64.outputs.cache-hit != 'true'
+        working-directory: ${{ github.workspace }}/obs-studio
+        run: |
+          msbuild /m /p:Configuration=RelWithDebInfo .\build64\libobs\libobs.vcxproj
+          msbuild /m /p:Configuration=RelWithDebInfo .\build64\UI\obs-frontend-api\obs-frontend-api.vcxproj
+      # - name: "Configure obs-ios-camera-source 64-bit"
+      #   working-directory: ${{ github.workspace }}/obs-ios-camera-source
+      #   run: |
+      #     mkdir .\build64
+      #     cd .\build64
+      #     cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DDepsPath="${{ github.workspace }}\cmbuild\deps\win64" -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build64\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build64\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" -DCMAKE_TOOLCHAIN_FILE="c:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_DEFAULT_TRIPLET="x64-windows-static" -DOPENSSL_ROOT_DIR="c:/vcpkg/installed/x64-windows-static" ..
+      # - name: "Build obs-ios-camera-source 64-bit"
+      #   working-directory: ${{ github.workspace }}/obs-ios-camera-source
+      #   run: msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-ios-camera-source.sln
+      # - name: "Set PR Artifact Filename"
+      #   shell: bash
+      #   run: |
+      #     echo "WIN_FILENAME=obs-ios-camera-source-${{ env.PACKAGE_VERSION }}-Windows" >> $GITHUB_ENV
+      # - name: "Package obs-ios-camera-source"
+      #   working-directory: ${{ github.workspace }}/obs-ios-camera-source
+      #   run: |
+      #     mkdir package
+      #     cd package
+      #     7z a "${{ env.WIN_FILENAME }}.zip"  "..\release\*"
+      #     iscc ..\installer\installer.iss /O. /F"${{ env.WIN_FILENAME }}-Installer"
+      # - name: "Publish ${{ env.WIN_FILENAME }}.zip"
+      #   if: success()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: "obs-ios-camera-source-${{ env.PACKAGE_VERSION }}-Windows"
+      #     path: ${{ github.workspace }}/obs-ios-camera-source/package/*.zip
+      # - name: "Publish ${{ env.WIN_FILENAME }}-Installer.exe"
+      #   if: success()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: "obs-ios-camera-source-${{ env.PACKAGE_VERSION }}-Windows-Installer"
+      #     path: ${{ github.workspace }}/obs-ios-camera-source/package/*.exe

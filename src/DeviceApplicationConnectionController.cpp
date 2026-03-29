@@ -40,7 +40,7 @@ DeviceApplicationConnectionController::~DeviceApplicationConnectionController()
 	worker_condition.notify_all();
 
 	if (worker_thread.joinable()) {
-		worker_thread.join();
+		worker_thread.detach();
 		worker_thread_active = false;
 	}
 }
@@ -53,7 +53,7 @@ void DeviceApplicationConnectionController::start()
 	// only start the worker thread if it's not already started
 	if (worker_thread_active == false) {
 		worker_thread = std::thread(
-			&DeviceApplicationConnectionController::worker_loop, this);
+			&DeviceApplicationConnectionController::worker_loop, std::weak_ptr<DeviceApplicationConnectionController>(shared_from_this()));
 		worker_thread_active = true;
 	}
 	else {
@@ -83,29 +83,39 @@ void DeviceApplicationConnectionController::processPacket(
 	}
 }
 
-void DeviceApplicationConnectionController::worker_loop()
+void DeviceApplicationConnectionController::worker_loop(std::weak_ptr<DeviceApplicationConnectionController> weak_this)
 {
-	while (!worker_stopping) {
-		std::unique_lock<std::mutex> lock(worker_mutex);
+	while (true) {
+		auto shared_this = weak_this.lock();
+		if (!shared_this) {
+			break;
+		}
 
-		auto state = deviceConnection->getState();
+		if (shared_this->worker_stopping) {
+			shared_this->worker_thread_active = false;
+			break;
+		}
+
+		std::unique_lock<std::mutex> lock(shared_this->worker_mutex);
+
+		auto state = shared_this->deviceConnection->getState();
 
 		switch (state) {
 		case portal::DeviceConnection::State::FailedToConnect:
 		case portal::DeviceConnection::State::Errored:
 
-			if (should_reconnect) {
+			if (shared_this->should_reconnect) {
 				blog(LOG_DEBUG, "[obs-ios-camera-plugin] Device connection errored: reconnecting");
-				this->deviceConnection->connect();
+				shared_this->deviceConnection->connect();
 			}
 
 			break;
 			
 		case portal::DeviceConnection::State::Disconnected:
-			if (should_reconnect) {
+			if (shared_this->should_reconnect) {
 				blog(LOG_DEBUG,
 				     "[obs-ios-camera-plugin] Device connection disconnected: reconnecting if possible");
-				this->deviceConnection->connect();
+				shared_this->deviceConnection->connect();
 			}
 			
 			break;
@@ -121,15 +131,13 @@ void DeviceApplicationConnectionController::worker_loop()
         case portal::DeviceConnection::State::ImpossibleToConnect:
             blog(LOG_DEBUG,
                  "[obs-ios-camera-plugin] Configuration is invalid.");
-            worker_stopping = true;
+            shared_this->worker_stopping = true;
             break;
         }
 
-		worker_condition.wait_for(lock, std::chrono::seconds(1));
+		shared_this->worker_condition.wait_for(lock, std::chrono::seconds(1));
 		lock.unlock();
 	}
-
-	worker_thread_active = false;
 }
 
 // Device Connection Delegate
