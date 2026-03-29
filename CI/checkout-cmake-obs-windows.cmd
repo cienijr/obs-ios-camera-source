@@ -30,12 +30,12 @@ if exist %OBSPath% (
 	echo   Updating tag info
 	cd /D %OBSPath%
 	@REM git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\latest-obs-studio-tag-pre-pull.txt"
-	echo "28.0.0" > "%OBSPath%\latest-obs-studio-tag-pre-pull.txt"
+	echo "27.0.1" > "%OBSPath%\latest-obs-studio-tag-pre-pull.txt"
 	set /p OBSLatestTagPrePull=<"%OBSPath%\latest-obs-studio-tag-pre-pull.txt"
 	git checkout master
 	git pull
 	@REM git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\latest-obs-studio-tag-post-pull.txt"
-	echo "28.0.0" > "%OBSPath%\latest-obs-studio-tag-post-pull.txt"
+	echo "27.0.1" > "%OBSPath%\latest-obs-studio-tag-post-pull.txt"
 	set /p OBSLatestTagPostPull=<"%OBSPath%\latest-obs-studio-tag-post-pull.txt"
 	set /p OBSLatestTag=<"%OBSPath%\latest-obs-studio-tag-post-pull.txt"
 	echo %OBSLatestTagPostPull%> "%OBSPath%\latest-obs-studio-tag.txt"
@@ -65,7 +65,7 @@ if not exist %OBSPath% (
 	git clone https://github.com/obsproject/obs-studio %OBSPath%
 	cd /D %OBSPath%\
 	@REM git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\obs-studio-latest-tag.txt"
-	echo "28.0.0" > "%OBSPath%\obs-studio-latest-tag.txt"
+	echo "27.0.1" > "%OBSPath%\obs-studio-latest-tag.txt"
 	set /p OBSLatestTag=<"%OBSPath%\obs-studio-latest-tag.txt"
 	set BuildOBS=true
 )
@@ -131,7 +131,7 @@ if defined BuildOBS (
 	
     cd ..
 	@REM git describe --tags --abbrev=0 > "%OBSPath%\obs-studio-last-tag-built.txt"
-	echo "28.0.0" > "%OBSPath%\obs-studio-last-tag-built.txt"
+	echo "27.0.1" > "%OBSPath%\obs-studio-last-tag-built.txt"
 	set /p OBSLastTagBuilt=<"%OBSPath%\obs-studio-last-tag-built.txt"
 ) else (
 	echo Last OBS tag built is:  %OBSLastTagBuilt%
