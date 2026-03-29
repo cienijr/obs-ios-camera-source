@@ -85,28 +85,28 @@ jobs:
         run: |
           msbuild /m /p:Configuration=RelWithDebInfo ${{ github.workspace }}\obs-studio\build64\obs-studio.sln
 
-      - name: 'CMake obs-ios-camera-source'
-        run: |
-          cd obs-ios-camera-source
-          CI\prepare-windows.cmd
+      # - name: 'CMake obs-ios-camera-source'
+      #   run: |
+      #     cd obs-ios-camera-source
+      #     CI\prepare-windows.cmd
 
       # - name: 'Build obs-ios-camera-source 32-bit'
       #   run: |
       #     cd obs-ios-camera-source
       #     msbuild /m /p:Configuration=RelWithDebInfo .\build32\obs-ios-camera-source.sln
 
-      - name: 'Build obs-ios-camera-source 64-bit'
-        run: |
-          cd obs-ios-camera-source
-          msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-ios-camera-source.sln
+      # - name: 'Build obs-ios-camera-source 64-bit'
+      #   run: |
+      #     cd obs-ios-camera-source
+      #     msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-ios-camera-source.sln
 
-      - name: 'Package obs-ios-camera-source'
-        run: |
-          cd obs-ios-camera-source
-          CI\package-windows.cmd
+      # - name: 'Package obs-ios-camera-source'
+      #   run: |
+      #     cd obs-ios-camera-source
+      #     CI\package-windows.cmd
 
-      - name: Upload a Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-windows
-          path: obs-ios-camera-source/package
+      # - name: Upload a Build Artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: build-windows
+      #     path: obs-ios-camera-source/package
