@@ -131,35 +131,35 @@ jobs:
         run: |
           msbuild /m /p:Configuration=RelWithDebInfo .\build64\libobs\libobs.vcxproj
           msbuild /m /p:Configuration=RelWithDebInfo .\build64\UI\obs-frontend-api\obs-frontend-api.vcxproj
-      - name: "Configure obs-ios-camera-source 64-bit"
-        working-directory: ${{ github.workspace }}/obs-ios-camera-source
-        run: |
-          mkdir .\build64
-          cd .\build64
-          cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DDepsPath="${{ github.workspace }}\cmbuild\deps\win64" -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019_64" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build64\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build64\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" -DCMAKE_TOOLCHAIN_FILE="c:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_DEFAULT_TRIPLET="x64-windows-static" -DOPENSSL_ROOT_DIR="c:/vcpkg/installed/x64-windows-static" ..
-      - name: "Build obs-ios-camera-source 64-bit"
-        working-directory: ${{ github.workspace }}/obs-ios-camera-source
-        run: msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-ios-camera-source.sln
-      - name: "Set PR Artifact Filename"
-        shell: bash
-        run: |
-          echo "WIN_FILENAME=obs-ios-camera-source-${{ env.PACKAGE_VERSION }}-Windows" >> $GITHUB_ENV
-      - name: "Package obs-ios-camera-source"
-        working-directory: ${{ github.workspace }}/obs-ios-camera-source
-        run: |
-          mkdir package
-          cd package
-          7z a "${{ env.WIN_FILENAME }}.zip"  "..\release\*"
-          iscc ..\installer\installer.iss /O. /F"${{ env.WIN_FILENAME }}-Installer"
-      - name: "Publish ${{ env.WIN_FILENAME }}.zip"
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: "obs-ios-camera-source-${{ env.PACKAGE_VERSION }}-Windows"
-          path: ${{ github.workspace }}/obs-ios-camera-source/package/*.zip
-      - name: "Publish ${{ env.WIN_FILENAME }}-Installer.exe"
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: "obs-ios-camera-source-${{ env.PACKAGE_VERSION }}-Windows-Installer"
-          path: ${{ github.workspace }}/obs-ios-camera-source/package/*.exe
+      # - name: "Configure obs-ios-camera-source 64-bit"
+      #   working-directory: ${{ github.workspace }}/obs-ios-camera-source
+      #   run: |
+      #     mkdir .\build64
+      #     cd .\build64
+      #     cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DDepsPath="${{ github.workspace }}\cmbuild\deps\win64" -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019_64" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build64\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build64\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" -DCMAKE_TOOLCHAIN_FILE="c:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_DEFAULT_TRIPLET="x64-windows-static" -DOPENSSL_ROOT_DIR="c:/vcpkg/installed/x64-windows-static" ..
+      # - name: "Build obs-ios-camera-source 64-bit"
+      #   working-directory: ${{ github.workspace }}/obs-ios-camera-source
+      #   run: msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-ios-camera-source.sln
+      # - name: "Set PR Artifact Filename"
+      #   shell: bash
+      #   run: |
+      #     echo "WIN_FILENAME=obs-ios-camera-source-${{ env.PACKAGE_VERSION }}-Windows" >> $GITHUB_ENV
+      # - name: "Package obs-ios-camera-source"
+      #   working-directory: ${{ github.workspace }}/obs-ios-camera-source
+      #   run: |
+      #     mkdir package
+      #     cd package
+      #     7z a "${{ env.WIN_FILENAME }}.zip"  "..\release\*"
+      #     iscc ..\installer\installer.iss /O. /F"${{ env.WIN_FILENAME }}-Installer"
+      # - name: "Publish ${{ env.WIN_FILENAME }}.zip"
+      #   if: success()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: "obs-ios-camera-source-${{ env.PACKAGE_VERSION }}-Windows"
+      #     path: ${{ github.workspace }}/obs-ios-camera-source/package/*.zip
+      # - name: "Publish ${{ env.WIN_FILENAME }}-Installer.exe"
+      #   if: success()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: "obs-ios-camera-source-${{ env.PACKAGE_VERSION }}-Windows-Installer"
+      #     path: ${{ github.workspace }}/obs-ios-camera-source/package/*.exe
