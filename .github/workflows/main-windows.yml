@@ -42,8 +42,9 @@ jobs:
         working-directory: ${{ github.workspace }}/obs-studio
         run: |
           git fetch --prune --unshallow
-          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+          echo "OBS_GIT_TAG=31.1.1" >> $GITHUB_ENV
+#          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+#          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
       - name: "Checkout last OBS-Studio release (${{ env.OBS_GIT_TAG }})"
         shell: bash
         working-directory: ${{ github.workspace }}/obs-studio
@@ -130,13 +131,13 @@ jobs:
         working-directory: ${{ github.workspace }}/obs-studio
         run: |
           msbuild /m /p:Configuration=RelWithDebInfo .\build64\libobs\libobs.vcxproj
-          msbuild /m /p:Configuration=RelWithDebInfo .\build64\UI\obs-frontend-api\obs-frontend-api.vcxproj
+          msbuild /m /p:Configuration=RelWithDebInfo .\build64\frontend\api\obs-frontend-api.vcxproj
       - name: "Configure obs-ios-camera-source 64-bit"
         working-directory: ${{ github.workspace }}/obs-ios-camera-source
         run: |
           mkdir .\build64
           cd .\build64
-          cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DDepsPath="${{ github.workspace }}\cmbuild\deps\win64" -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019_64" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build64\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build64\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" -DCMAKE_TOOLCHAIN_FILE="c:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_DEFAULT_TRIPLET="x64-windows-static" -DOPENSSL_ROOT_DIR="c:/vcpkg/installed/x64-windows-static" ..
+          cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DDepsPath="${{ github.workspace }}\cmbuild\deps\win64" -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019_64" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build64\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build64\frontend\api\RelWithDebInfo\obs-frontend-api.lib" -DCMAKE_TOOLCHAIN_FILE="c:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_DEFAULT_TRIPLET="x64-windows-static" -DOPENSSL_ROOT_DIR="c:/vcpkg/installed/x64-windows-static" ..
       - name: "Build obs-ios-camera-source 64-bit"
         working-directory: ${{ github.workspace }}/obs-ios-camera-source
         run: msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-ios-camera-source.sln
