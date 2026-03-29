@@ -41,7 +41,7 @@ jobs:
         working-directory: ${{ github.workspace }}/obs-studio
         run: |
           git fetch --prune --unshallow
-          echo "OBS_GIT_TAG=30.2.0" >> $GITHUB_ENV
+          echo "OBS_GIT_TAG=29.1.1" >> $GITHUB_ENV
 #          echo "OBS_GIT_HASH=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 #          echo "OBS_GIT_TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
       - name: "Checkout last OBS-Studio release (${{ env.OBS_GIT_TAG }})"
@@ -72,17 +72,17 @@ jobs:
         id: qtcache
         uses: actions/cache@v3
         with:
-          path: windows-deps-qt6-2024-05-08-x64.zip
+          path: windows-deps-qt6-2023-04-12-x64.zip
           key: "qtdep-${{ env.QT_CACHE_VERSION }} | ${{ runner.os }}"
           restore-keys: |
             qtdep-${{ env.QT_CACHE_VERSION }} | ${{ runner.os }}
       - name: "Download Prerequisite: Qt"
         if: steps.qtcache.outputs.cache-hit != 'true'
         run: |
-          curl -kLO https://github.com/obsproject/obs-deps/releases/download/2024-05-08/windows-deps-qt6-2024-05-08-x64.zip -f --retry 5 -C -
+          curl -kLO https://github.com/obsproject/obs-deps/releases/download/2023-04-12/windows-deps-qt6-2023-04-12-x64.zip -f --retry 5 -C -
       - name: "Extract Prerequisite: Qt"
         run: |
-          7z x windows-deps-qt6-2024-05-08-x64.zip -o"${{ github.workspace }}\cmbuild\QT"
+          7z x windows-deps-qt6-2023-04-12-x64.zip -o"${{ github.workspace }}\cmbuild\QT"
       - name: "Restore Cached Vcpkg dependencies"
         id: vcpkgcache
         uses: actions/cache@v3
@@ -106,8 +106,8 @@ jobs:
       - name: "Install Prerequisite: Pre-built OBS-Studio dependencies"
         if: steps.obscache.outputs.cache-hit != 'true'
         run: |
-          curl -kLO https://github.com/obsproject/obs-deps/releases/download/2024-05-08/windows-deps-2024-05-08-x64.zip -f --retry 5 -C -
-          7z x windows-deps-2024-05-08-x64.zip -o"${{ github.workspace }}\cmbuild\deps"
+          curl -kLO https://github.com/obsproject/obs-deps/releases/download/2023-04-12/windows-deps-2023-04-12-x64.zip -f --retry 5 -C -
+          7z x windows-deps-2023-04-12-x64.zip -o"${{ github.workspace }}\cmbuild\deps"
       - name: "Restore OBS-Studio 64-bit Build v${{ env.OBS_GIT_TAG }} from Cache"
         id: build-cache-obs-64
         uses: actions/cache@v3
