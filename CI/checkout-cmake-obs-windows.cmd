@@ -69,12 +69,12 @@ if not exist %OBSPath% (
 
 REM If the needed obs-studio libs for this build_config do not exist,
 REM set the build flag.
-if not exist %OBSPath%\build_x86\libobs\%build_config%\obs.lib (
-	echo obs-studio\build_x86\libobs\%build_config%\obs.lib does not exist
+if not exist %OBSPath%\build_x64\libobs\%build_config%\obs.lib (
+	echo obs-studio\build_x64\libobs\%build_config%\obs.lib does not exist
 	set BuildOBS=true
 )
-if not exist %OBSPath%\build_x86\UI\obs-frontend-api\%build_config%\obs-frontend-api.lib (
-	echo obs-studio\build_x86\UI\obs-frontend-api\%build_config%\obs-frontend-api.lib does not exist
+if not exist %OBSPath%\build_x64\UI\obs-frontend-api\%build_config%\obs-frontend-api.lib (
+	echo obs-studio\build_x64\UI\obs-frontend-api\%build_config%\obs-frontend-api.lib does not exist
 	set BuildOBS=true
 )
 
@@ -101,28 +101,17 @@ if defined BuildOBS (
 	echo:
 	
     echo   Removing previous build dirs...
-	if exist build_x86 rmdir /s /q "%OBSPath%\build_x86"
 	if exist build_x64 rmdir /s /q "%OBSPath%\build_x64"
 	
     echo   Making new build dirs...
-	mkdir build_x86
 	mkdir build_x64
 	
-    echo   Running cmake for obs-studio %OBSLatestTag% 32-bit...
-	cd build_x86
-	cmake -G "Visual Studio 17 2022" -A Win32 -DCMAKE_SYSTEM_VERSION=10.0 -DQTDIR="%QTDIR32%" -DDepsPath="%DepsPath32%" -DBUILD_CAPTIONS=true -DDISABLE_PLUGINS=true -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
-	echo:
-	echo:
-	
     echo   Running cmake for obs-studio %OBSLatestTag% 64-bit...
-	cd ..\build_x64
+	cd build_x64
 	cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_SYSTEM_VERSION=10.0 -DQTDIR="%QTDIR64%" -DDepsPath="%DepsPath64%" -DBUILD_CAPTIONS=true -DDISABLE_PLUGINS=true -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
 	echo:
 	echo:
-	
-    echo   Building obs-studio %OBSLatestTag% 32-bit ^(Build Config: %build_config%^)...
-	call msbuild /m /p:Configuration=%build_config% %OBSPath%\build_x86\obs-studio.sln
-	
+		
     echo   Building obs-studio %OBSLatestTag% 64-bit ^(Build Config: %build_config%^)...
 	call msbuild /m /p:Configuration=%build_config% %OBSPath%\build_x64\obs-studio.sln
 	
