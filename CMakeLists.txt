@@ -297,10 +297,10 @@ if(WIN32)
 
 	if(ARCH EQUAL 64)
 		set(OBS_ARCH_NAME "64bit")
-		set(OBS_BUILDDIR_ARCH "build64")
+		set(OBS_BUILDDIR_ARCH "build_x64")
 	else()
 		set(OBS_ARCH_NAME "32bit")
-		set(OBS_BUILDDIR_ARCH "build32")
+		set(OBS_BUILDDIR_ARCH "build_x86")
 		add_definitions(/arch:SSE2)
 	endif()
 
