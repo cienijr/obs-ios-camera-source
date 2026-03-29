@@ -127,7 +127,7 @@ jobs:
         run: |
           if(!(Test-Path -Path ".\build64")){New-Item -ItemType directory -Path .\build64}
           cd .\build64
-          cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019_64" -DDepsPath="${{ github.workspace }}\cmbuild\deps\win64" -DCOPIED_DEPENDENCIES=NO -DCOPY_DEPENDENCIES=YES -DBUILD_BROWSER=OFF ..
+          cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT" -DDepsPath="${{ github.workspace }}\cmbuild\deps\win64" -DCOPIED_DEPENDENCIES=NO -DCOPY_DEPENDENCIES=YES -DBUILD_BROWSER=OFF ..
       - name: "Build OBS-Studio 64-bit"
         if: steps.build-cache-obs-64.outputs.cache-hit != 'true'
         working-directory: ${{ github.workspace }}/obs-studio
@@ -139,7 +139,7 @@ jobs:
       #   run: |
       #     mkdir .\build64
       #     cd .\build64
-      #     cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DDepsPath="${{ github.workspace }}\cmbuild\deps\win64" -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT\${{ env.QT_VERSION }}\msvc2019_64" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build64\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build64\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" -DCMAKE_TOOLCHAIN_FILE="c:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_DEFAULT_TRIPLET="x64-windows-static" -DOPENSSL_ROOT_DIR="c:/vcpkg/installed/x64-windows-static" ..
+      #     cmake -G "${{ env.CMAKE_GENERATOR }}" -A x64 -DDepsPath="${{ github.workspace }}\cmbuild\deps\win64" -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" -DQTDIR="${{ github.workspace }}\cmbuild\QT" -DLibObs_DIR="${{ github.workspace }}\obs-studio\build64\libobs" -DLIBOBS_INCLUDE_DIR="${{ github.workspace }}\obs-studio\libobs" -DLIBOBS_LIB="${{ github.workspace }}\obs-studio\build64\libobs\RelWithDebInfo\obs.lib" -DOBS_FRONTEND_LIB="${{ github.workspace }}\obs-studio\build64\UI\obs-frontend-api\RelWithDebInfo\obs-frontend-api.lib" -DCMAKE_TOOLCHAIN_FILE="c:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_DEFAULT_TRIPLET="x64-windows-static" -DOPENSSL_ROOT_DIR="c:/vcpkg/installed/x64-windows-static" ..
       # - name: "Build obs-ios-camera-source 64-bit"
       #   working-directory: ${{ github.workspace }}/obs-ios-camera-source
       #   run: msbuild /m /p:Configuration=RelWithDebInfo .\build64\obs-ios-camera-source.sln
