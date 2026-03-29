@@ -70,7 +70,7 @@ jobs:
           echo "CMAKE_VERSION_SUFFIX=$VERSION_SUFFIX" >> $GITHUB_ENV
       - name: "Restore Cached Qt"
         id: qtcache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: Qt_${{ env.QT_VERSION }}.7z
           key: "qtdep-${{ env.QT_CACHE_VERSION }} | ${{ runner.os }}"
@@ -86,7 +86,7 @@ jobs:
 
       - name: "Restore Cached Vcpkg dependencies"
         id: vcpkgcache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: "C:/vcpkg/"
           key: "vcpkgcachedeps-${{ env.VCPKG_CACHE_VERSION }} | ${{ runner.os }}"
@@ -99,7 +99,7 @@ jobs:
           vcpkg install openssl:x64-windows-static
       - name: "Restore Cached OBS-Studio Dependencies"
         id: obscache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}\cmbuild\deps\**
           key: "obsdep-${{ env.WINDOWS_DEPS_CACHE_VERSION }} | ${{ runner.os }}"
@@ -112,7 +112,7 @@ jobs:
           7z x dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -o"${{ github.workspace }}\cmbuild\deps"
       - name: "Restore OBS-Studio 32-bit Build v${{ env.OBS_GIT_TAG }} from Cache"
         id: build-cache-obs-32
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           CACHE_NAME: "build-cache-obs-32"
         with:
@@ -135,7 +135,7 @@ jobs:
           msbuild /m /p:Configuration=RelWithDebInfo .\build32\UI\obs-frontend-api\obs-frontend-api.vcxproj
       - name: "Restore OBS-Studio 64-bit Build v${{ env.OBS_GIT_TAG }} from Cache"
         id: build-cache-obs-64
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         env:
           CACHE_NAME: "build-cache-obs-64"
         with:
@@ -187,13 +187,13 @@ jobs:
           iscc ..\installer\installer.iss /O. /F"${{ env.WIN_FILENAME }}-Installer"
       - name: "Publish ${{ env.WIN_FILENAME }}.zip"
         if: success()
-        uses: actions/upload-artifact@v2-preview
+        uses: actions/upload-artifact@v4
         with:
           name: "obs-ios-camera-source-${{ env.PACKAGE_VERSION }}-Windows"
           path: ${{ github.workspace }}/obs-ios-camera-source/package/*.zip
       - name: "Publish ${{ env.WIN_FILENAME }}-Installer.exe"
         if: success()
-        uses: actions/upload-artifact@v2-preview
+        uses: actions/upload-artifact@v4
         with:
           name: "obs-ios-camera-source-${{ env.PACKAGE_VERSION }}-Windows-Installer"
           path: ${{ github.workspace }}/obs-ios-camera-source/package/*.exe
