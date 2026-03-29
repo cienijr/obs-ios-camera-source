@@ -79,11 +79,11 @@ jobs:
 
       - name: 'Build OBS Studio 32-bit'
         run: |
-          msbuild /m /p:Configuration=RelWithDebInfo ${{ github.workspace }}\obs-studio\build32\obs-studio.sln
+          msbuild /m /p:Configuration=RelWithDebInfo ${{ github.workspace }}\obs-studio\build_x86\obs-studio.sln
 
       - name: 'Build OBS Studio 64-bit'
         run: |
-          msbuild /m /p:Configuration=RelWithDebInfo ${{ github.workspace }}\obs-studio\build64\obs-studio.sln
+          msbuild /m /p:Configuration=RelWithDebInfo ${{ github.workspace }}\obs-studio\build_x64\obs-studio.sln
 
       - name: 'CMake obs-ios-camera-source'
         run: |
