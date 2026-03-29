@@ -29,11 +29,13 @@ if exist %OBSPath% (
 	echo obs-studio directory exists
 	echo   Updating tag info
 	cd /D %OBSPath%
-	git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\latest-obs-studio-tag-pre-pull.txt"
+	@REM git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\latest-obs-studio-tag-pre-pull.txt"
+	echo "28.0.0" > "%OBSPath%\latest-obs-studio-tag-pre-pull.txt"
 	set /p OBSLatestTagPrePull=<"%OBSPath%\latest-obs-studio-tag-pre-pull.txt"
 	git checkout master
 	git pull
-	git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\latest-obs-studio-tag-post-pull.txt"
+	@REM git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\latest-obs-studio-tag-post-pull.txt"
+	echo "28.0.0" > "%OBSPath%\latest-obs-studio-tag-post-pull.txt"
 	set /p OBSLatestTagPostPull=<"%OBSPath%\latest-obs-studio-tag-post-pull.txt"
 	set /p OBSLatestTag=<"%OBSPath%\latest-obs-studio-tag-post-pull.txt"
 	echo %OBSLatestTagPostPull%> "%OBSPath%\latest-obs-studio-tag.txt"
@@ -62,7 +64,8 @@ if not exist %OBSPath% (
 	echo obs-studio directory does not exist
 	git clone https://github.com/obsproject/obs-studio %OBSPath%
 	cd /D %OBSPath%\
-	git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\obs-studio-latest-tag.txt"
+	@REM git describe --tags --abbrev=0 --exclude="*-rc*" > "%OBSPath%\obs-studio-latest-tag.txt"
+	echo "28.0.0" > "%OBSPath%\obs-studio-latest-tag.txt"
 	set /p OBSLatestTag=<"%OBSPath%\obs-studio-latest-tag.txt"
 	set BuildOBS=true
 )
@@ -108,26 +111,27 @@ if defined BuildOBS (
 	mkdir build32
 	mkdir build64
 	
-    echo   Running cmake for obs-studio %OBSLatestTag% 32-bit...
-	cd build32
-	cmake -G "Visual Studio 16 2019" -A Win32 -DCMAKE_SYSTEM_VERSION=10.0 -DQTDIR="%QTDIR32%" -DDepsPath="%DepsPath32%" -DBUILD_CAPTIONS=true -DDISABLE_PLUGINS=true -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
-	echo:
-	echo:
+    @REM echo   Running cmake for obs-studio %OBSLatestTag% 32-bit...
+	@REM cd build32
+	@REM cmake -G "Visual Studio 17 2022" -A Win32 -DCMAKE_SYSTEM_VERSION=10.0 -DQTDIR="%QTDIR32%" -DDepsPath="%DepsPath32%" -DBUILD_CAPTIONS=true -DDISABLE_PLUGINS=true -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
+	@REM echo:
+	@REM echo:
 	
     echo   Running cmake for obs-studio %OBSLatestTag% 64-bit...
-	cd ..\build64
-	cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_SYSTEM_VERSION=10.0 -DQTDIR="%QTDIR64%" -DDepsPath="%DepsPath64%" -DBUILD_CAPTIONS=true -DDISABLE_PLUGINS=true -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
+	cd build64
+	cmake -G "Visual Studio 17 2022" -A x64 -DCMAKE_SYSTEM_VERSION=10.0 -DQTDIR="%QTDIR64%" -DDepsPath="%DepsPath64%" -DBUILD_CAPTIONS=true -DDISABLE_PLUGINS=true -DCOPIED_DEPENDENCIES=false -DCOPY_DEPENDENCIES=true ..
 	echo:
 	echo:
 	
-    REM echo   Building obs-studio %OBSLatestTag% 32-bit ^(Build Config: %build_config%^)...
-	REM call msbuild /m /p:Configuration=%build_config% %OBSPath%\build32\obs-studio.sln
+    @REM echo   Building obs-studio %OBSLatestTag% 32-bit ^(Build Config: %build_config%^)...
+	@REM call msbuild /m /p:Configuration=%build_config% %OBSPath%\build32\obs-studio.sln
 	
-    REM echo   Building obs-studio %OBSLatestTag% 64-bit ^(Build Config: %build_config%^)...
-	REM call msbuild /m /p:Configuration=%build_config% %OBSPath%\build64\obs-studio.sln
+    echo   Building obs-studio %OBSLatestTag% 64-bit ^(Build Config: %build_config%^)...
+	call msbuild /m /p:Configuration=%build_config% %OBSPath%\build64\obs-studio.sln
 	
     cd ..
-	git describe --tags --abbrev=0 > "%OBSPath%\obs-studio-last-tag-built.txt"
+	@REM git describe --tags --abbrev=0 > "%OBSPath%\obs-studio-last-tag-built.txt"
+	echo "28.0.0" > "%OBSPath%\obs-studio-last-tag-built.txt"
 	set /p OBSLastTagBuilt=<"%OBSPath%\obs-studio-last-tag-built.txt"
 ) else (
 	echo Last OBS tag built is:  %OBSLastTagBuilt%
