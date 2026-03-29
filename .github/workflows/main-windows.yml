@@ -82,7 +82,7 @@ jobs:
           curl -kLO https://github.com/obsproject/obs-deps/releases/download/2025-07-11/windows-deps-qt6-2025-07-11-x64.zip -f --retry 5 -C -
       - name: "Extract Prerequisite: Qt"
         run: |
-          7z x windows-deps-2025-07-11-x64.zip -o"${{ github.workspace }}\cmbuild\QT"
+          7z x windows-deps-qt6-2025-07-11-x64.zip -o"${{ github.workspace }}\cmbuild\QT"
       - name: "Restore Cached Vcpkg dependencies"
         id: vcpkgcache
         uses: actions/cache@v3
