@@ -20,6 +20,7 @@ jobs:
       QT_VERSION: "6.3.1"
       VCPKG_CACHE_VERSION: "1"
       WINDOWS_DEPS_CACHE_VERSION: "3" # Change whenever updating Qt dependency URL, in order to force a cache reset
+      WINDOWS_DEPS_VERSION: "2019"
       CMAKE_GENERATOR: "Visual Studio 17 2022"
       CMAKE_SYSTEM_VERSION: "10.0"
     steps:
@@ -106,8 +107,10 @@ jobs:
       - name: "Install Prerequisite: Pre-built OBS-Studio dependencies"
         if: steps.obscache.outputs.cache-hit != 'true'
         run: |
-          curl -kLO https://github.com/obsproject/obs-deps/releases/download/2022-08-02/windows-deps-2022-08-02-x64.zip -f --retry 5 -C -
-          7z x windows-deps-2022-08-02-x64.zip -o"${{ github.workspace }}\cmbuild\deps"
+          curl -kLO https://cdn-fastly.obsproject.com/downloads/dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -f --retry 5 -C -
+          7z x dependencies${{ env.WINDOWS_DEPS_VERSION }}.zip -o"${{ github.workspace }}\cmbuild\deps"
+#          curl -kLO https://github.com/obsproject/obs-deps/releases/download/2022-08-02/windows-deps-2022-08-02-x64.zip -f --retry 5 -C -
+#          7z x windows-deps-2022-08-02-x64.zip -o"${{ github.workspace }}\cmbuild\deps"
       - name: "Restore OBS-Studio 64-bit Build v${{ env.OBS_GIT_TAG }} from Cache"
         id: build-cache-obs-64
         uses: actions/cache@v3
