@@ -73,7 +73,7 @@ jobs:
         id: qtcache
         uses: actions/cache@v3
         with:
-          path: Qt_${{ env.QT_VERSION }}.7z
+          path: windows-deps-qt6-2025-07-11-x64.zip
           key: "qtdep-${{ env.QT_CACHE_VERSION }} | ${{ runner.os }}"
           restore-keys: |
             qtdep-${{ env.QT_CACHE_VERSION }} | ${{ runner.os }}
